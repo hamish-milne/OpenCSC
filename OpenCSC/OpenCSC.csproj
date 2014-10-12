@@ -7,8 +7,8 @@
     <ProjectGuid>{F9A2A104-3C45-4267-BBA3-1941EC636856}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OHDL</RootNamespace>
-    <AssemblyName>OHDL</AssemblyName>
+    <RootNamespace>OpenCSC</RootNamespace>
+    <AssemblyName>OpenCSC</AssemblyName>
     <TargetFrameworkVersion>v2.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -35,6 +35,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Preprocessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

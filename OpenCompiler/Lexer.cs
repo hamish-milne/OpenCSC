@@ -6,46 +6,6 @@ using System.Text;
 namespace OpenCompiler
 {
 	/// <summary>
-	/// A general lexer exception that contains line and column info
-	/// </summary>
-	public class LexerException : Exception
-	{
-		/// <summary>
-		/// The line number
-		/// </summary>
-		public int Line;
-
-		/// <summary>
-		/// The column number
-		/// </summary>
-		public int Column;
-
-		/// <summary>
-		/// The textual error message
-		/// </summary>
-		public override string Message
-		{
-			get
-			{
-				return base.Message + " at line " + Line + ", column " + Column;
-			}
-		}
-
-		/// <summary>
-		/// Creates a new instance
-		/// </summary>
-		/// <param name="message">The error message</param>
-		/// <param name="line">The line number</param>
-		/// <param name="column">The column number</param>
-		public LexerException(string message, int line, int column)
-			: base(message)
-		{
-			Line = line;
-			Column = column;
-		}
-	}
-
-	/// <summary>
 	/// References a portion of a string using start and length indices
 	/// </summary>
 	/// <remarks>
@@ -591,7 +551,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <returns>A list of lexed item information</returns>
 		/// <exception cref="InvalidOperationException">There are no templates or no input</exception>
-		/// <exception cref="LexerException">Use this for user errors</exception>
+		/// <exception cref="CodeException">Use this for user errors</exception>
 		/// <exception cref="EndOfFileException">The lexer unexpectedly reached the end of the stream</exception>
 		public override IList<LexerItemInfo> Run()
 		{
@@ -680,7 +640,7 @@ namespace OpenCompiler
 					// If it has zero length (no characters eaten) an infinite loop is possible,
 					// so we should throw here
 					if (position == startPos)
-						throw new LexerException(toAdd + " has zero length", line, column);
+						throw new CodeException(toAdd + " has zero length", line, column);
 				}
 				else
 				{
@@ -688,7 +648,7 @@ namespace OpenCompiler
 					// or there was an unexpected character, in which case we throw
 					EatWhitespace();
 					if (position < content.Length)
-						throw new LexerException("`" + content[position] + "' was unexpected", line, column);
+						throw new CodeException("`" + content[position] + "' was unexpected", line, column);
 					break;
 				}
 			}

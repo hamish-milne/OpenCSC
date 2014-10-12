@@ -1,7 +1,48 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace OpenCompiler
 {
+	/// <summary>
+	/// Base class for a user code exception
+	/// </summary>
+	public class CodeException : Exception
+	{
+		/// <summary>
+		/// The line number
+		/// </summary>
+		public int Line;
+
+		/// <summary>
+		/// The column number
+		/// </summary>
+		public int Column;
+
+		/// <summary>
+		/// The textual error message
+		/// </summary>
+		public override string Message
+		{
+			get
+			{
+				return base.Message + " at line " + Line + ", column " + Column;
+			}
+		}
+
+		/// <summary>
+		/// Creates a new instance
+		/// </summary>
+		/// <param name="message">The error message</param>
+		/// <param name="line">The line number</param>
+		/// <param name="column">The column number</param>
+		public CodeException(string message, int line, int column)
+			: base(message)
+		{
+			Line = line;
+			Column = column;
+		}
+	}
+
 	/// <summary>
 	/// Accepts an input of type <typeparamref name="T"/>
 	/// </summary>
