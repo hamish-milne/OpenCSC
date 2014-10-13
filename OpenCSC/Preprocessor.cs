@@ -5,6 +5,9 @@ using OpenCompiler;
 
 namespace OpenCSC
 {
+	/// <summary>
+	/// 'If' statement
+	/// </summary>
 	public class If : Keyword
 	{
 		public override Substring Value
@@ -13,6 +16,9 @@ namespace OpenCSC
 		}
 	}
 
+	/// <summary>
+	/// 'Else' statement
+	/// </summary>
 	public class Else : Keyword
 	{
 		public override Substring Value
@@ -21,10 +27,16 @@ namespace OpenCSC
 		}
 	}
 
+	/// <summary>
+	/// Base class for preprocessor directives
+	/// </summary>
 	public abstract class PPDirective : Keyword
 	{
 	}
 
+	/// <summary>
+	/// Else-if directive
+	/// </summary>
 	public class Elif : PPDirective
 	{
 		public override Substring Value
@@ -33,6 +45,9 @@ namespace OpenCSC
 		}
 	}
 
+	/// <summary>
+	/// Used to end 'if', 'else' and 'elif' blocks
+	/// </summary>
 	public class Endif : PPDirective
 	{
 		public override Substring Value
@@ -41,6 +56,9 @@ namespace OpenCSC
 		}
 	}
 
+	/// <summary>
+	/// Used to define conditional compilation symbols
+	/// </summary>
 	public class Define : PPDirective
 	{
 		public override Substring Value
@@ -49,6 +67,9 @@ namespace OpenCSC
 		}
 	}
 
+	/// <summary>
+	/// Used to undefine conditional compilation symbols
+	/// </summary>
 	public class Undef : PPDirective
 	{
 		public override Substring Value
@@ -57,6 +78,9 @@ namespace OpenCSC
 		}
 	}
 
+	/// <summary>
+	/// Outputs
+	/// </summary>
 	public class Warning : PPDirective
 	{
 		public override Substring Value
