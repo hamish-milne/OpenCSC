@@ -7,27 +7,43 @@ namespace OpenCSC
 	{
 		private static void Main(string[] args)
 		{
-			var input = "public class // Something here until \n /* block comment \n multiline */ keyword // Now a line comment";
+			var input = 
+@"
+#define somethingElse
+test1
+#if something
+test2
+# elif (somethingElse ) && something
+test3
+#else
+test4
+";
 			var lexer = new DefaultLexer()
 			{
+				new Define(),
+				new If(),
+				new Else(),
+				new Elif(),
+				new Endif(),
 				new Identifier(),
-				new BlockBraceOpen(),
-				new BlockBraceClose(),
+				new Hash(),
+				new OR(),
+				new AND(),
 				new ParenOpen(),
 				new ParenClose(),
-				new Semicolon(),
-				new Ampersand(),
-				new Pipe(),
-				new AND(),
-				new OR(),
-				new Comma(),
-				new LineComment(),
-				new BlockComment()
 			};
 			lexer.SetInput(input);
 			try
 			{
 				var result = lexer.Run();
+				foreach (var item in result)
+				{
+					Console.WriteLine(item);
+				}
+				Console.WriteLine("===");
+				var preproc = new Preprocessor();
+				preproc.SetInput(result);
+				result = preproc.Run();
 				foreach (var item in result)
 				{
 					Console.WriteLine(item);

@@ -105,13 +105,13 @@ namespace OpenCompiler
 							lexer.Advance();
 							var v = GetHexValue(lexer.Current);
 							if (v == -1)
-								throw new LexerException("Invalid Unicode escape", lexer.Line, lexer.Column);
+								throw new CodeException("Invalid Unicode escape", lexer.Line, lexer.Column);
 							total = (total << 4) + v;
 						}
 						c = (char)total;
 						break;
 					default:
-						throw new LexerException("Unrecognized escape sequence", lexer.Line, lexer.Column);
+						throw new CodeException("Unrecognized escape sequence", lexer.Line, lexer.Column);
 				}
 				return true;
 			}
@@ -121,7 +121,7 @@ namespace OpenCompiler
 				return false;
 			}
 			else if (c == '\n' && !AllowNewline)
-				throw new LexerException("Newline in literal", lexer.Line, lexer.Column);
+				throw new CodeException("Newline in literal", lexer.Line, lexer.Column);
 			else if (c == '\0')
 				throw new EndOfFileException("Incomplete string literal. Expecting `" + QuoteChar + "'");
 			else
@@ -247,7 +247,7 @@ namespace OpenCompiler
 		/// <summary>
 		/// An empty literal
 		/// </summary>
-		public static readonly VerbatimLiteral Empty = new VerbatimLiteral("");
+		new public static readonly VerbatimLiteral Empty = new VerbatimLiteral("");
 
 		/// <summary>
 		/// '@' for verbatim literals

@@ -149,8 +149,8 @@ namespace OpenCompiler
 			if (start < 0 ||
 				length < 0 ||
 				start >= source.Length ||
-				length >= source.Length - start)
-				throw new InvalidOperationException("Invalid substring");
+				length > source.Length - start)
+				throw new InvalidOperationException("Invalid substring: " + start + ", " + length + ", " + source.Length);
 			int hash = 5381;
 			fixed (char* c = source)
 			{
@@ -611,17 +611,20 @@ namespace OpenCompiler
 				if (toAdd == null)
 				{
 					numWhitespace = EatWhitespace();
-					rLine = Line;
-					rCol = Column;
-					var c = content[position];
-					for (int i = 0; i < charMaps.Count; i++)
+					if (position < content.Length)
 					{
-						thisMap = charMaps[i];
-						LexerItem toCheck;
-						if (!thisMap.TryGetValue(c, out toCheck))
-							continue;
-						if (CheckSingle(toCheck, ref toAdd))
-							break;
+						rLine = Line;
+						rCol = Column;
+						var c = content[position];
+						for (int i = 0; i < charMaps.Count; i++)
+						{
+							thisMap = charMaps[i];
+							LexerItem toCheck;
+							if (!thisMap.TryGetValue(c, out toCheck))
+								continue;
+							if (CheckSingle(toCheck, ref toAdd))
+								break;
+						}
 					}
 				}
 

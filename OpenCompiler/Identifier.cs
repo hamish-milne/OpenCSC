@@ -72,6 +72,19 @@ namespace OpenCompiler
 		{
 			return GetType().FullName + ": " + Value.ToString();
 		}
+
+		public override int GetHashCode()
+		{
+			return Value.GetHashCode();
+		}
+
+		public override bool Equals(object obj)
+		{
+			var word = obj as Word;
+			if (word == null)
+				return false;
+			return Value == word.Value;
+		}
 	}
 
 	/// <summary>
