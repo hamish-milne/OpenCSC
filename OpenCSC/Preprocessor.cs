@@ -186,10 +186,26 @@ namespace OpenCSC
 	public class Preprocessor : Pipeline<IList<LexerItemInfo>, IList<LexerItemInfo>>, IInput<PreprocessorSettings>
 	{
 		public PreprocessorSettings Settings;
+		protected CompilerOutput output;
 		protected IList<LexerItemInfo> input;
 		protected List<bool> conditionStack = new List<bool>();
 		protected Dictionary<LexerItem, Action> actions;
 		protected bool switchOn;
+		protected bool elseUsed;
+
+		public override CompilerOutput Output
+		{
+			get
+			{
+				if (output == null)
+					output = new DefaultCompilerOutput();
+				return output;
+			}
+			set
+			{
+				output = value;
+			}
+		}
 
 		protected delegate void Action(IList<LexerItemInfo> directives);
 
@@ -217,22 +233,41 @@ namespace OpenCSC
 		{
 			this.input = input;
 		}
-
+		
 		protected enum ExpressionValue
 		{
 			None, False, True, AND, OR
 		}
 
+		protected struct ExpressionValueInfo
+		{
+			public ExpressionValue Value;
+			public int Column;
+			public int Length;
+
+			public ExpressionValueInfo(ExpressionValue value, int column, int length)
+			{
+				this.Value = value;
+				this.Column = column;
+				this.Length = length;
+			}
+		}
+		
 		public virtual bool ParseExpression(IList<LexerItemInfo> directives, int start, int end)
 		{
 			if(directives == null)
 				throw new ArgumentNullException("directives");
+			if (start >= directives.Count)
+				throw new ArgumentOutOfRangeException("start");
 			if(end - start < 1)
-				throw new CodeException("Expecting an expression", 0, 0);
+			{
+				Output.Errors.Add(new InvalidPreprocessorExpression(directives[start].Line, directives[start].Column, 1));
+				return false;
+			}
 			int parenLocation = 0;
 			int parenDepth = 0;
-			var expressionList = new List<ExpressionValue>();
-			for (int i = start; i < end; i++)
+			var expressionList = new List<ExpressionValueInfo>();
+			for (int i = start; i < end && i < directives.Count; i++)
 			{
 				var item = directives[i];
 				if (item.Item is ParenOpen)
@@ -245,8 +280,10 @@ namespace OpenCSC
 				{
 					parenDepth--;
 					if (parenDepth == 0)
-						expressionList.Add(ParseExpression(directives, parenLocation + 1, i)
-							? ExpressionValue.True : ExpressionValue.False);
+						expressionList.Add(new ExpressionValueInfo(
+							ParseExpression(directives, parenLocation + 1, i)
+							? ExpressionValue.True : ExpressionValue.False,
+							item.Column, item.Item.Length));
 				}
 				else
 				{
@@ -254,31 +291,39 @@ namespace OpenCSC
 						continue;
 					var word = item.Item as Word;
 					if (word != null)
-						expressionList.Add(Settings.Conditions.Contains(word.Value)
-							? ExpressionValue.True : ExpressionValue.False);
+						expressionList.Add(new ExpressionValueInfo(
+							Settings.Conditions.Contains(word.Value)
+							? ExpressionValue.True : ExpressionValue.False,
+							item.Column, item.Item.Length));
 					else if (item.Item is AND)
-						expressionList.Add(ExpressionValue.AND);
+						expressionList.Add(new ExpressionValueInfo(
+							ExpressionValue.AND, item.Column, item.Item.Length));
 					else if (item.Item is OR)
-						expressionList.Add(ExpressionValue.OR);
+						expressionList.Add(new ExpressionValueInfo(
+							ExpressionValue.OR, item.Column, item.Item.Length));
 					else
-						throw new CodeException("Invalid expression", item.Line, item.Column);
+						Output.Errors.Add(new InvalidPreprocessorExpression(item.Line, item.Column, item.Item.Length));
 				}
 			}
 			return EvaluateExpression(expressionList, directives[start].Line);
 		}
-
-		protected virtual bool EvaluateExpression(IList<ExpressionValue> expressionList, int line)
+		
+		protected virtual bool EvaluateExpression(IList<ExpressionValueInfo> expressionList, int line)
 		{
 			var value = ExpressionValue.None;
 			var op = ExpressionValue.None;
 			for (int i = 0; i < expressionList.Count; i++)
 			{
-				var v = expressionList[i];
+				var exp = expressionList[i];
+				var v = exp.Value;
 				if (v == ExpressionValue.False || v == ExpressionValue.True)
 				{
 					if (value != ExpressionValue.None && op == ExpressionValue.None)
-						throw new CodeException("Expecting an operator", line, 0);
-					if (value == ExpressionValue.None)
+					{
+						Output.Errors.Add(new EndOfLineExpected(line, exp.Column, exp.Length));
+						return false;
+					}
+					else if (value == ExpressionValue.None)
 						value = v;
 					else
 					{
@@ -294,12 +339,15 @@ namespace OpenCSC
 				else
 				{
 					if (value == ExpressionValue.None)
-						throw new CodeException("Expecting a value", line, 0);
+					{
+						Output.Errors.Add(new InvalidPreprocessorExpression(line, exp.Column, exp.Length));
+						return false;
+					}
 					op = v;
 				}
 			}
 			if (op != ExpressionValue.None)
-				throw new CodeException("Expecting a value", line, 0);
+				Output.Errors.Add(new InvalidPreprocessorExpression(line, 0, 1));
 			return (value == ExpressionValue.True);
 		}
 
@@ -314,8 +362,8 @@ namespace OpenCSC
 		protected void CheckExcessParams(IList<LexerItemInfo> directives, int num)
 		{
 			if (directives.Count > num)
-				throw new CodeException(directives[num] + " was unexpected",
-					directives[num].Line, directives[num].Column);
+				Output.Errors.Add(new UnexpectedDirective(
+					directives[num].Line, directives[num].Column, directives[num].Item.Length));
 		}
 
 		protected void Nop(IList<LexerItemInfo> directives)
@@ -332,10 +380,11 @@ namespace OpenCSC
 		protected void Else(IList<LexerItemInfo> directives)
 		{
 			CheckExcessParams(directives, 1);
-			if(conditionStack.Count < 1)
-				throw new CodeException("Must have 'if' before 'else'",
-					directives[0].Line, directives[0].Column);
+			if (conditionStack.Count < 1 || elseUsed)
+				Output.Errors.Add(new UnexpectedDirective(
+					directives[0].Line, directives[0].Column, directives[0].Item.Length));
 			conditionStack[conditionStack.Count - 1] = !switchOn;
+			elseUsed = true;
 		}
 		
 		protected void Elif(IList<LexerItemInfo> directives)
@@ -355,12 +404,18 @@ namespace OpenCSC
 		protected void Define(IList<LexerItemInfo> directives)
 		{
 			if (directives.Count < 2)
-				throw new CodeException("Expecting an identifier",
-					directives[0].Line, directives[0].Column);
+			{
+				Output.Errors.Add(new InvalidPreprocessorExpression(
+					directives[0].Line, directives[0].Column, directives[0].Item.Length));
+				return;
+			}
 			var item = directives[1].Item as Word;
 			if (item == null)
-				throw new CodeException(directives[1].Item + " is not an identifier",
-					directives[1].Line, directives[1].Column);
+			{
+				Output.Errors.Add(new InvalidPreprocessorExpression(
+					directives[1].Line, directives[1].Column, directives[1].Item.Length));
+				return;
+			}
 			CheckExcessParams(directives, 2);
 			if (!IncludeCode())
 				return;
@@ -383,7 +438,10 @@ namespace OpenCSC
 			if (directives == null)
 				throw new ArgumentNullException("directives");
 			if (directives.Count == 0)
-				throw new CodeException("Preprocessor directive expected", line, column);
+			{
+				Output.Errors.Add(new DirectiveExpected(line, column, 1));
+				return;
+			}
 
 			var first = directives[0];
 			var firstItem = first.Item;
@@ -392,9 +450,9 @@ namespace OpenCSC
 			if (action != null)
 				action(directives);
 			else
-				throw new CodeException("Invalid preprocessor directive: " + firstItem, first.Line, first.Column);
+				Output.Errors.Add(new DirectiveExpected(first.Line, first.Column, firstItem.Length));
 		}
-
+		
 		protected virtual bool IgnoreToken(LexerItem token)
 		{
 			return token is WhitespaceToken || token is Comment;
@@ -423,9 +481,7 @@ namespace OpenCSC
 							continue;
 						if (testItem.Line != item.Line)
 							break;
-						throw new CodeException(
-							"Preprocessor directives must be the first non-whitespace character on a line",
-							item.Line, item.Column);
+						Output.Errors.Add(new NotFirstCharacter(item.Line, item.Column, item.Item.Length));
 					}
 					tokens.Clear();
 					for (int j = i + 1; j < input.Count; j++)
@@ -449,7 +505,10 @@ namespace OpenCSC
 				}
 			}
 			if (conditionStack.Count > 0)
-				throw new CodeException("#endif directive expected", 0, 0);
+			{
+				var last = input[input.Count - 1];
+				Output.Errors.Add(new EndifExpected(last.Line, last.Column, last.Item.Length));
+			}
 			return ret;
 		}
 	}
