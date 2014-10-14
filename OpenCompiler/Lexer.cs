@@ -14,7 +14,7 @@ namespace OpenCompiler
 	/// </remarks>
 	public struct Substring : IEquatable<Substring>
 	{
-		private string source = "";
+		private string source;
 		private int start, length;
 
 		/// <summary>
@@ -227,6 +227,8 @@ namespace OpenCompiler
 			return other.Priority - Priority;
 		}
 
+		public abstract int Length { get; }
+
 		/// <summary>
 		/// Checks if the given item is present at the current point in the lexer content.
 		/// </summary>
@@ -264,6 +266,11 @@ namespace OpenCompiler
 			get { return true; }
 		}
 
+		public override int Length
+		{
+			get { return 1; }
+		}
+
 		public override LexerItem CheckPresence(Lexer lexer)
 		{
 			if (lexer.EatWhitespace() > 0)
@@ -286,6 +293,11 @@ namespace OpenCompiler
 				return this;
 			}
 			return null;
+		}
+
+		public override int Length
+		{
+			get { return 1; }
 		}
 	}
 
@@ -322,7 +334,7 @@ namespace OpenCompiler
 	/// <summary>
 	/// Thrown when the lexer unexpectedly reaches the end of the file
 	/// </summary>
-	public class EndOfFileException : Exception
+	public class EndOfFileException : CodeException
 	{
 		/// <summary>
 		/// Creates a new instance with the given message
@@ -493,6 +505,22 @@ namespace OpenCompiler
 	/// </summary>
 	public class DefaultLexer : Lexer
 	{
+		protected CompilerOutput output;
+
+		public override CompilerOutput Output
+		{
+			get
+			{
+				if (output == null)
+					output = new DefaultCompilerOutput();
+				return output;
+			}
+			set
+			{
+				output = value;
+			}
+		}
+
 		/// <summary>
 		/// Direct access to the string content
 		/// </summary>
@@ -544,6 +572,51 @@ namespace OpenCompiler
 			Position = 0;
 			line = 0;
 			column = 0;
+		}
+
+		public class UnexpectedCharacterError : CompilerError
+		{
+			protected int line;
+			protected int column;
+
+			public override ErrorLevel ErrorLevel
+			{
+				get { return ErrorLevel.Error; }
+			}
+
+			public override int Number
+			{
+				get { return 1519; }
+			}
+
+			public override string Message
+			{
+				get { return "Unexpected character: " + Character; }
+			}
+
+			public override int Line
+			{
+				get { return line; }
+			}
+
+			public override int Column
+			{
+				get { return column; }
+			}
+
+			public override int Length
+			{
+				get { return 1; }
+			}
+
+			public virtual char Character { get; set; }
+
+			public UnexpectedCharacterError(char character, int line, int column)
+			{
+				Character = character;
+				this.line = line;
+				this.column = column;
+			}
 		}
 
 		/// <summary>
@@ -643,7 +716,7 @@ namespace OpenCompiler
 					// If it has zero length (no characters eaten) an infinite loop is possible,
 					// so we should throw here
 					if (position == startPos)
-						throw new CodeException(toAdd + " has zero length", line, column);
+						throw new CodeException(toAdd + " has zero length");
 				}
 				else
 				{
@@ -651,8 +724,14 @@ namespace OpenCompiler
 					// or there was an unexpected character, in which case we throw
 					EatWhitespace();
 					if (position < content.Length)
-						throw new CodeException("`" + content[position] + "' was unexpected", line, column);
-					break;
+					{
+						Output.Errors.Add(new UnexpectedCharacterError(content[position], line, column));
+						position++;
+					}
+					else
+					{
+						break;
+					}
 				}
 			}
 			return ret;

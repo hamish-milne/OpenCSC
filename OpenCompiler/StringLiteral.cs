@@ -2,6 +2,42 @@
 
 namespace OpenCompiler
 {
+	public class UnrecognizedEscapeSequence : DefaultCompilerError
+	{
+		public UnrecognizedEscapeSequence(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public override string Message
+		{
+			get { return "Unrecognized escape sequence"; }
+		}
+
+		public override int Number
+		{
+			get { return 1009; }
+		}
+	}
+
+	public class NewlineInConstant : DefaultCompilerError
+	{
+		public NewlineInConstant(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public override string Message
+		{
+			get { return "Newline in constant"; }
+		}
+
+		public override int Number
+		{
+			get { return 1010; }
+		}
+	}
+
 	/// <summary>
 	/// Base class for a quoted (string, character etc.) literal
 	/// </summary>
@@ -26,6 +62,11 @@ namespace OpenCompiler
 		public override object Value
 		{
 			get { return StringValue.ToString(); }
+		}
+
+		public override int Length
+		{
+			get { return StringValue.Length; }
 		}
 
 		/// <summary>
@@ -105,13 +146,17 @@ namespace OpenCompiler
 							lexer.Advance();
 							var v = GetHexValue(lexer.Current);
 							if (v == -1)
-								throw new CodeException("Invalid Unicode escape", lexer.Line, lexer.Column);
+							{
+								lexer.Output.Errors.Add(new UnrecognizedEscapeSequence(lexer.Line, lexer.Column - i - 1, i + 1));
+								break;
+							}
 							total = (total << 4) + v;
 						}
 						c = (char)total;
 						break;
 					default:
-						throw new CodeException("Unrecognized escape sequence", lexer.Line, lexer.Column);
+						lexer.Output.Errors.Add(new UnrecognizedEscapeSequence(lexer.Line, lexer.Column - 1, 2));
+						break;
 				}
 				return true;
 			}
@@ -121,11 +166,10 @@ namespace OpenCompiler
 				return false;
 			}
 			else if (c == '\n' && !AllowNewline)
-				throw new CodeException("Newline in literal", lexer.Line, lexer.Column);
+				lexer.Output.Errors.Add(new NewlineInConstant(lexer.Line, lexer.Column, 1));
 			else if (c == '\0')
 				throw new EndOfFileException("Incomplete string literal. Expecting `" + QuoteChar + "'");
-			else
-				return true;
+			return true;
 		}
 
 		/// <summary>

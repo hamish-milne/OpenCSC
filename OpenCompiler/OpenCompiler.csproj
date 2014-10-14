@@ -36,9 +36,11 @@
   <ItemGroup>
     <Compile Include="Braces.cs" />
     <Compile Include="Comment.cs" />
+    <Compile Include="CompilerErrors.cs" />
     <Compile Include="DoubleChar.cs" />
     <Compile Include="Identifier.cs" />
     <Compile Include="Lexer.cs" />
+    <Compile Include="LexerErrors.cs" />
     <Compile Include="Literals.cs" />
     <Compile Include="Operators.cs" />
     <Compile Include="Pipeline.cs" />

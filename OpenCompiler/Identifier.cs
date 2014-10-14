@@ -30,6 +30,11 @@ namespace OpenCompiler
 			get { return -1; }
 		}
 
+		public override int Length
+		{
+			get { return Value.Length; }
+		}
+
 		/// <summary>
 		/// Checks if the given character is valid for this word type
 		/// </summary>

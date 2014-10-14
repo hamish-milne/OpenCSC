@@ -66,6 +66,11 @@
 			get { return 2; }
 		}
 
+		public override int Length
+		{
+			get { return CommentedText.Length + NumChars; }
+		}
+
 		/// <summary>
 		/// Checks for a line comment
 		/// </summary>
@@ -148,6 +153,11 @@
 		public virtual char SecondChar
 		{
 			get { return '*'; }
+		}
+
+		public override int Length
+		{
+			get { return CommentedText.Length + 4; }
 		}
 
 		/// <summary>

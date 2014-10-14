@@ -3,7 +3,9 @@
 	/// <summary>
 	/// Base class for a single-character operator
 	/// </summary>
-	public abstract class Operator : SingleChar { }
+	public abstract class Operator : SingleChar
+	{
+	}
 
 	/// <summary>
 	/// The dot operator, used for object resolution

@@ -8,38 +8,14 @@ namespace OpenCompiler
 	/// </summary>
 	public class CodeException : Exception
 	{
-		/// <summary>
-		/// The line number
-		/// </summary>
-		public int Line;
-
-		/// <summary>
-		/// The column number
-		/// </summary>
-		public int Column;
-
-		/// <summary>
-		/// The textual error message
-		/// </summary>
-		public override string Message
+		public CodeException()
+			: base("The compilation could not be completed")
 		{
-			get
-			{
-				return base.Message + " at line " + Line + ", column " + Column;
-			}
 		}
 
-		/// <summary>
-		/// Creates a new instance
-		/// </summary>
-		/// <param name="message">The error message</param>
-		/// <param name="line">The line number</param>
-		/// <param name="column">The column number</param>
-		public CodeException(string message, int line, int column)
+		public CodeException(string message)
 			: base(message)
 		{
-			Line = line;
-			Column = column;
 		}
 	}
 
@@ -94,6 +70,40 @@ namespace OpenCompiler
 		/// <c>true</c> if the compilation was a success, otherwise <c>false</c>
 		/// </summary>
 		public abstract bool Success { get; }
+
+		/// <summary>
+		/// The collection of compiler output lines (errors, warnings and information)
+		/// </summary>
+		public abstract IList<CompilerError> Errors { get; }
+	}
+
+	public class DefaultCompilerOutput : CompilerOutput
+	{
+		protected IList<CompilerError> errors;
+
+		public override bool Success
+		{
+			get
+			{
+				for (int i = 0; i < Errors.Count; i++)
+				{
+					var e = Errors[i];
+					if (e != null && e.ErrorLevel == ErrorLevel.Error)
+						return false;
+				}
+				return true;
+			}
+		}
+
+		public override IList<CompilerError> Errors
+		{
+			get
+			{
+				if (errors == null)
+					errors = new List<CompilerError>();
+				return errors;
+			}
+		}
 	}
 
 	/// <summary>
@@ -103,6 +113,8 @@ namespace OpenCompiler
 	/// <typeparam name="TOutput">Thhe type of output to provide</typeparam>
 	public abstract class Pipeline<TInput, TOutput> : IInput<TInput>, IOutput<TOutput>
 	{
+		public abstract CompilerOutput Output { get; set; }
+
 		/// <summary>
 		/// Sets the pipeline stage to use the provided input
 		/// </summary>

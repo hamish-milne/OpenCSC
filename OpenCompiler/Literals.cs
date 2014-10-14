@@ -40,6 +40,8 @@ namespace OpenCompiler
 		/// </summary>
 		protected int numberBase;
 
+		protected int length = 1;
+
 		/// <summary>
 		/// Creates a new instance
 		/// </summary>
@@ -81,6 +83,11 @@ namespace OpenCompiler
 					boxed = value;
 				return boxed;
 			}
+		}
+
+		public override int Length
+		{
+			get { return length; }
 		}
 
 		/// <summary>
