@@ -13,7 +13,7 @@ namespace OpenCSC
 test1
 #if something
 test2
-# elif (somethingElse ) && something
+# elif somethingElse
 test3
 #else
 test4
@@ -42,12 +42,16 @@ test4
 				}
 				Console.WriteLine("===");
 				var preproc = new Preprocessor();
+				preproc.Output = lexer.Output;
 				preproc.SetInput(result);
 				result = preproc.Run();
 				foreach (var item in result)
 				{
 					Console.WriteLine(item);
 				}
+				Console.WriteLine("Errors: ");
+				foreach (var error in preproc.Output.Errors)
+					Console.WriteLine(error);
 			}
 			catch (Exception e)
 			{

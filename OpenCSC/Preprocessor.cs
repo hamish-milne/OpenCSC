@@ -188,10 +188,39 @@ namespace OpenCSC
 		public PreprocessorSettings Settings;
 		protected CompilerOutput output;
 		protected IList<LexerItemInfo> input;
-		protected List<bool> conditionStack = new List<bool>();
+		protected List<ConditionStackElement> conditionStack = new List<ConditionStackElement>();
 		protected Dictionary<LexerItem, Action> actions;
-		protected bool switchOn;
-		protected bool elseUsed;
+
+		protected struct ConditionStackElement
+		{
+			public bool Enabled;
+			public bool HasEnabled;
+			public bool Final;
+
+			public ConditionStackElement(bool enabled)
+			{
+				Enabled = enabled;
+				HasEnabled = enabled;
+				Final = false;
+			}
+
+			public ConditionStackElement(bool enabled, bool hasEnabled, bool final)
+			{
+				Enabled = enabled;
+				HasEnabled = hasEnabled;
+				Final = final;
+			}
+
+			public static ConditionStackElement DoIf(bool enabled, ConditionStackElement prev)
+			{
+				return new ConditionStackElement(enabled && !prev.HasEnabled, enabled || prev.HasEnabled, prev.Final);
+			}
+
+			public static ConditionStackElement DoElse(ConditionStackElement prev)
+			{
+				return new ConditionStackElement(!prev.HasEnabled, true, true);
+			}
+		}
 
 		public override CompilerOutput Output
 		{
@@ -354,7 +383,7 @@ namespace OpenCSC
 		protected bool IncludeCode()
 		{
 			for (int i = 0; i < conditionStack.Count; i++)
-				if (!conditionStack[i])
+				if (!conditionStack[i].Enabled)
 					return false;
 			return true;
 		}
@@ -373,32 +402,31 @@ namespace OpenCSC
 		protected void If(IList<LexerItemInfo> directives)
 		{
 			var ret = ParseExpression(directives, 1, directives.Count);
-			switchOn = ret;
-			conditionStack.Add(ret);
+			conditionStack.Add(new ConditionStackElement(ret));
 		}
 
 		protected void Else(IList<LexerItemInfo> directives)
 		{
 			CheckExcessParams(directives, 1);
-			if (conditionStack.Count < 1 || elseUsed)
+			bool valid = false;
+			ConditionStackElement elem;
+			int lastPos = conditionStack.Count - 1;
+			if (lastPos >= 0)
+			{
+				elem = conditionStack[lastPos];
+				valid = !elem.Final;
+			}
+			if(!valid)
 				Output.Errors.Add(new UnexpectedDirective(
 					directives[0].Line, directives[0].Column, directives[0].Item.Length));
-			conditionStack[conditionStack.Count - 1] = !switchOn;
-			elseUsed = true;
+			conditionStack[lastPos] = ConditionStackElement.DoElse(conditionStack[lastPos]);
 		}
 		
 		protected void Elif(IList<LexerItemInfo> directives)
 		{
-			if (!switchOn)
-			{
-				var ret = ParseExpression(directives, 1, directives.Count);
-				switchOn = ret;
-				conditionStack[conditionStack.Count - 1] = ret;
-			}
-			else
-			{
-				conditionStack[conditionStack.Count - 1] = false;
-			}
+			var lastPos = conditionStack.Count - 1;
+			var ret = ParseExpression(directives, 1, directives.Count);
+			conditionStack[lastPos] = ConditionStackElement.DoIf(ret, conditionStack[lastPos]);
 		}
 
 		protected void Define(IList<LexerItemInfo> directives)
@@ -428,8 +456,11 @@ namespace OpenCSC
 		protected void Endif(IList<LexerItemInfo> directives)
 		{
 			CheckExcessParams(directives, 1);
-			conditionStack.RemoveAt(conditionStack.Count - 1);
-			switchOn = false;
+			if (conditionStack.Count < 1)
+				Output.Errors.Add(new UnexpectedDirective(directives[0].Line,
+					directives[0].Column, directives[0].Item.Length));
+			else
+				conditionStack.RemoveAt(conditionStack.Count - 1);
 		}
 
 
@@ -496,12 +527,11 @@ namespace OpenCSC
 					}
 					ProcessDirective(tokens, pastFirstSymbol, item.Line, item.Column);
 				}
-				else
+				else if (!IgnoreToken(item.Item))
 				{
-					if (!IgnoreToken(item.Item))
-						pastFirstSymbol = true;
-					if(IncludeCode())
-						ret.Add(item);
+					pastFirstSymbol = true;
+					if (IncludeCode())
+						ret.Add(item);						
 				}
 			}
 			if (conditionStack.Count > 0)

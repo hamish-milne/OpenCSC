@@ -17,6 +17,11 @@ namespace OpenCompiler
 		public abstract int Line { get; }
 		public abstract int Column { get; }
 		public abstract int Length { get; }
+
+		public override string ToString()
+		{
+			return Number + ": " + Message + " at line " + Line + ", column " + Column;
+		}
 	}
 
 	public class DefaultCompilerError : CompilerError
