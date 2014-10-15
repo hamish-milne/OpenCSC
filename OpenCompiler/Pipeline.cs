@@ -106,6 +106,11 @@ namespace OpenCompiler
 		}
 	}
 
+	public static class Cache<T> where T : class, new()
+	{
+		public static readonly T Instance = new T();
+	}
+
 	/// <summary>
 	/// Base class for a pipeline stage, accepting input and providing output
 	/// </summary>
@@ -113,6 +118,11 @@ namespace OpenCompiler
 	/// <typeparam name="TOutput">Thhe type of output to provide</typeparam>
 	public abstract class Pipeline<TInput, TOutput> : IInput<TInput>, IOutput<TOutput>
 	{
+		public static T Get<T>() where T : class, new()
+		{
+			return Cache<T>.Instance;
+		}
+
 		public abstract CompilerOutput Output { get; set; }
 
 		/// <summary>

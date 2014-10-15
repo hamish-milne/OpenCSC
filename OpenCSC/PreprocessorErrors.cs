@@ -21,6 +21,11 @@ namespace OpenCSC
 			: base(line, column, length)
 		{
 		}
+
+		public InvalidPreprocessorExpression(LexerItemInfo item)
+			: base(item)
+		{
+		}
 	}
 
 	public class EndOfLineExpected : DefaultCompilerError
@@ -37,6 +42,11 @@ namespace OpenCSC
 
 		public EndOfLineExpected(int line, int column, int length)
 			: base(line, column, length)
+		{
+		}
+
+		public EndOfLineExpected(LexerItemInfo item)
+			: base(item)
 		{
 		}
 	}
@@ -57,6 +67,11 @@ namespace OpenCSC
 			: base(line, column, length)
 		{
 		}
+
+		public IdentifierExpected(LexerItemInfo item)
+			: base(item)
+		{
+		}
 	}
 
 	public class EndifExpected : DefaultCompilerError
@@ -73,6 +88,11 @@ namespace OpenCSC
 
 		public EndifExpected(int line, int column, int length)
 			: base(line, column, length)
+		{
+		}
+
+		public EndifExpected(LexerItemInfo item)
+			: base(item)
 		{
 		}
 	}
@@ -93,6 +113,11 @@ namespace OpenCSC
 			: base(line, column, length)
 		{
 		}
+
+		public UnexpectedDirective(LexerItemInfo item)
+			: base(item)
+		{
+		}
 	}
 
 	public class DirectiveExpected : DefaultCompilerError
@@ -111,6 +136,11 @@ namespace OpenCSC
 			: base(line, column, length)
 		{
 		}
+
+		public DirectiveExpected(LexerItemInfo item)
+			: base(item)
+		{
+		}
 	}
 
 	public class NotFirstCharacter : DefaultCompilerError
@@ -127,6 +157,11 @@ namespace OpenCSC
 
 		public NotFirstCharacter(int line, int column, int length)
 			: base(line, column, length)
+		{
+		}
+
+		public NotFirstCharacter(LexerItemInfo item)
+			: base(item)
 		{
 		}
 	}

@@ -37,6 +37,13 @@ namespace OpenCompiler
 			this.length = length;
 		}
 
+		public DefaultCompilerError(LexerItemInfo item)
+		{
+			this.line = item.Line;
+			this.column = item.Column;
+			this.length = item.Item.Length;
+		}
+
 		public override int Length
 		{
 			get { return length; }

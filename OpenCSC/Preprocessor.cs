@@ -5,135 +5,40 @@ using OpenCompiler;
 
 namespace OpenCSC
 {
+	public interface IDirective
+	{
+		Preprocessor.Directive GetDirective();
+	}
+
 	/// <summary>
 	/// 'If' statement
 	/// </summary>
-	public class If : Keyword
+	public class If : Keyword, IDirective
 	{
 		public override Substring Value
 		{
 			get { return "if"; }
+		}
+
+		public virtual Preprocessor.Directive GetDirective()
+		{
+			return Cache<Preprocessor.If>.Instance;
 		}
 	}
 
 	/// <summary>
 	/// 'Else' statement
 	/// </summary>
-	public class Else : Keyword
+	public class Else : Keyword, IDirective
 	{
 		public override Substring Value
 		{
 			get { return "else"; }
 		}
-	}
 
-	/// <summary>
-	/// Base class for preprocessor directives
-	/// </summary>
-	public abstract class PPDirective : Keyword
-	{
-	}
-
-	/// <summary>
-	/// Else-if directive
-	/// </summary>
-	public class Elif : PPDirective
-	{
-		public override Substring Value
+		public virtual Preprocessor.Directive GetDirective()
 		{
-			get { return "elif"; }
-		}
-	}
-
-	/// <summary>
-	/// Used to end 'if', 'else' and 'elif' blocks
-	/// </summary>
-	public class Endif : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "endif"; }
-		}
-	}
-
-	/// <summary>
-	/// Used to define conditional compilation symbols
-	/// </summary>
-	public class Define : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "define"; }
-		}
-	}
-
-	/// <summary>
-	/// Used to undefine conditional compilation symbols
-	/// </summary>
-	public class Undef : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "undef"; }
-		}
-	}
-
-	/// <summary>
-	/// Outputs
-	/// </summary>
-	public class Warning : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "warning"; }
-		}
-	}
-
-	public class Error : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "error"; }
-		}
-	}
-
-	public class Line : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "line"; }
-		}
-	}
-
-	public class Region : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "region"; }
-		}
-	}
-
-	public class Endregion : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "endregion"; }
-		}
-	}
-
-	public class Pragma : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "pragma"; }
-		}
-	}
-
-	public class Checksum : PPDirective
-	{
-		public override Substring Value
-		{
-			get { return "checksum"; }
+			return Cache<Preprocessor.If>.Instance;
 		}
 	}
 
@@ -189,7 +94,6 @@ namespace OpenCSC
 		protected CompilerOutput output;
 		protected IList<LexerItemInfo> input;
 		protected List<ConditionStackElement> conditionStack = new List<ConditionStackElement>();
-		protected Dictionary<LexerItem, Action> actions;
 
 		protected struct ConditionStackElement
 		{
@@ -222,6 +126,250 @@ namespace OpenCSC
 			}
 		}
 
+		/// <summary>
+		/// Base class for preprocessor directives
+		/// </summary>
+		public abstract class Directive : Keyword
+		{
+			public abstract void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives);
+		}
+
+		/// <summary>
+		/// If directive
+		/// </summary>
+		public class If : Directive
+		{
+			public override Substring Value
+			{
+				get { return "if"; }
+			}
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+				var ret = parent.ParseExpression(directives, 1, directives.Count);
+				parent.conditionStack.Add(new ConditionStackElement(ret));
+			}
+		}
+
+		/// <summary>
+		/// Else directive
+		/// </summary>
+		public class Else : Directive
+		{
+			public override Substring Value
+			{
+				get { return "else"; }
+			}
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+				parent.CheckExcessParams(directives, 1);
+				var cs = parent.conditionStack;
+				bool valid = false;
+				ConditionStackElement elem;
+				int lastPos = cs.Count - 1;
+				if (lastPos >= 0)
+				{
+					elem = cs[lastPos];
+					valid = !elem.Final;
+				}
+				if (!valid)
+					parent.Output.Errors.Add(new UnexpectedDirective(directives[0]));
+				cs[lastPos] = ConditionStackElement.DoElse(cs[lastPos]);
+			}
+		}
+
+		/// <summary>
+		/// Else-if directive
+		/// </summary>
+		public class Elif : Directive
+		{
+			public override Substring Value
+			{
+				get { return "elif"; }
+			}
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+				var lastPos = parent.conditionStack.Count - 1;
+				var ret = parent.ParseExpression(directives, 1, directives.Count);
+				parent.conditionStack[lastPos] = ConditionStackElement.DoIf(ret, parent.conditionStack[lastPos]);
+			}
+		}
+
+		/// <summary>
+		/// Used to end 'if', 'else' and 'elif' blocks
+		/// </summary>
+		public class Endif : Directive
+		{
+			public override Substring Value
+			{
+				get { return "endif"; }
+			}
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+				parent.CheckExcessParams(directives, 1);
+				if (parent.conditionStack.Count < 1)
+					parent.Output.Errors.Add(new UnexpectedDirective(directives[0]));
+				else
+					parent.conditionStack.RemoveAt(parent.conditionStack.Count - 1);
+			}
+		}
+
+		public abstract class DefineBase : Directive
+		{
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+				if (directives.Count < 2)
+				{
+					parent.Output.Errors.Add(new InvalidPreprocessorExpression(directives[0]));
+					return;
+				}
+				var item = directives[1].Item as Word;
+				if (item == null)
+				{
+					parent.Output.Errors.Add(new InvalidPreprocessorExpression(directives[1]));
+					return;
+				}
+				parent.CheckExcessParams(directives, 2);
+				if (!parent.IncludeCode())
+					return;
+				var conditions = parent.Settings.Conditions;
+				DoFunction(parent);
+			}
+
+			protected abstract void DoFunction(Preprocessor parent);
+		}
+
+		/// <summary>
+		/// Used to define conditional compilation symbols
+		/// </summary>
+		public class Define : DefineBase
+		{
+			public override Substring Value
+			{
+				get { return "define"; }
+			}
+
+			protected override void DoFunction(Preprocessor parent)
+			{
+				var conditions = parent.Settings.Conditions;
+				if (!conditions.Contains(Value))
+					conditions.Add(Value);
+			}
+		}
+
+		/// <summary>
+		/// Used to undefine conditional compilation symbols
+		/// </summary>
+		public class Undef : Directive
+		{
+			public override Substring Value
+			{
+				get { return "undef"; }
+			}
+
+			protected override void DoFunction(Preprocessor parent)
+			{
+				var conditions = parent.Settings.Conditions;
+				while (conditions.Remove(Value))
+				{
+				}
+			}
+		}
+
+		/*public abstract class OutputDirective : Directive
+		{
+
+
+			public override LexerItem CheckPresence(Lexer lexer)
+			{
+				var baseRet = base.CheckPresence(lexer);
+				if (baseRet != null)
+				{
+					lexer.EatWhitespace();
+					lexer.EatUntil('\n', false);
+				}
+			}
+		}*/
+
+		/// <summary>
+		/// Outputs
+		/// </summary>
+		public class Warning : Directive
+		{
+			public override Substring Value
+			{
+				get { return "warning"; }
+			}
+
+			
+
+
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+				
+			}
+		}
+
+		public class Error : Directive
+		{
+			public override Substring Value
+			{
+				get { return "error"; }
+			}
+		}
+
+		public class Line : Directive
+		{
+			public override Substring Value
+			{
+				get { return "line"; }
+			}
+		}
+
+		public class Region : Directive
+		{
+			public override Substring Value
+			{
+				get { return "region"; }
+			}
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+			}
+		}
+
+		public class Endregion : Directive
+		{
+			public override Substring Value
+			{
+				get { return "endregion"; }
+			}
+
+			public override void RunDirective(Preprocessor parent, IList<LexerItemInfo> directives)
+			{
+			}
+		}
+
+		public class Pragma : Directive
+		{
+			public override Substring Value
+			{
+				get { return "pragma"; }
+			}
+		}
+
+		public class Checksum : Directive
+		{
+			public override Substring Value
+			{
+				get { return "checksum"; }
+			}
+		}
+
 		public override CompilerOutput Output
 		{
 			get
@@ -234,23 +382,6 @@ namespace OpenCSC
 			{
 				output = value;
 			}
-		}
-
-		protected delegate void Action(IList<LexerItemInfo> directives);
-
-		public Preprocessor()
-		{
-			actions = new Dictionary<LexerItem, Action>()
-			{
-				{ new Define(), Define },
-				{ new Undef(), Define },
-				{ new If(), If },
-				{ new Elif(), Elif },
-				{ new Else(), Else },
-				{ new Endif(), Endif },
-				{ new Region(), Nop },
-				{ new Endregion(), Nop },
-			};
 		}
 
 		void IInput<PreprocessorSettings>.SetInput(PreprocessorSettings value)
@@ -290,7 +421,7 @@ namespace OpenCSC
 				throw new ArgumentOutOfRangeException("start");
 			if(end - start < 1)
 			{
-				Output.Errors.Add(new InvalidPreprocessorExpression(directives[start].Line, directives[start].Column, 1));
+				Output.Errors.Add(new InvalidPreprocessorExpression(directives[start]));
 				return false;
 			}
 			int parenLocation = 0;
@@ -331,7 +462,7 @@ namespace OpenCSC
 						expressionList.Add(new ExpressionValueInfo(
 							ExpressionValue.OR, item.Column, item.Item.Length));
 					else
-						Output.Errors.Add(new InvalidPreprocessorExpression(item.Line, item.Column, item.Item.Length));
+						Output.Errors.Add(new InvalidPreprocessorExpression(item));
 				}
 			}
 			return EvaluateExpression(expressionList, directives[start].Line);
@@ -391,78 +522,8 @@ namespace OpenCSC
 		protected void CheckExcessParams(IList<LexerItemInfo> directives, int num)
 		{
 			if (directives.Count > num)
-				Output.Errors.Add(new UnexpectedDirective(
-					directives[num].Line, directives[num].Column, directives[num].Item.Length));
+				Output.Errors.Add(new UnexpectedDirective(directives[num]));
 		}
-
-		protected void Nop(IList<LexerItemInfo> directives)
-		{
-		}
-
-		protected void If(IList<LexerItemInfo> directives)
-		{
-			var ret = ParseExpression(directives, 1, directives.Count);
-			conditionStack.Add(new ConditionStackElement(ret));
-		}
-
-		protected void Else(IList<LexerItemInfo> directives)
-		{
-			CheckExcessParams(directives, 1);
-			bool valid = false;
-			ConditionStackElement elem;
-			int lastPos = conditionStack.Count - 1;
-			if (lastPos >= 0)
-			{
-				elem = conditionStack[lastPos];
-				valid = !elem.Final;
-			}
-			if(!valid)
-				Output.Errors.Add(new UnexpectedDirective(
-					directives[0].Line, directives[0].Column, directives[0].Item.Length));
-			conditionStack[lastPos] = ConditionStackElement.DoElse(conditionStack[lastPos]);
-		}
-		
-		protected void Elif(IList<LexerItemInfo> directives)
-		{
-			var lastPos = conditionStack.Count - 1;
-			var ret = ParseExpression(directives, 1, directives.Count);
-			conditionStack[lastPos] = ConditionStackElement.DoIf(ret, conditionStack[lastPos]);
-		}
-
-		protected void Define(IList<LexerItemInfo> directives)
-		{
-			if (directives.Count < 2)
-			{
-				Output.Errors.Add(new InvalidPreprocessorExpression(
-					directives[0].Line, directives[0].Column, directives[0].Item.Length));
-				return;
-			}
-			var item = directives[1].Item as Word;
-			if (item == null)
-			{
-				Output.Errors.Add(new InvalidPreprocessorExpression(
-					directives[1].Line, directives[1].Column, directives[1].Item.Length));
-				return;
-			}
-			CheckExcessParams(directives, 2);
-			if (!IncludeCode())
-				return;
-			if (directives[0].Item is Define)
-				Settings.Conditions.Add(item.Value);
-			else
-				while (Settings.Conditions.Remove(item.Value)) { }
-		}
-
-		protected void Endif(IList<LexerItemInfo> directives)
-		{
-			CheckExcessParams(directives, 1);
-			if (conditionStack.Count < 1)
-				Output.Errors.Add(new UnexpectedDirective(directives[0].Line,
-					directives[0].Column, directives[0].Item.Length));
-			else
-				conditionStack.RemoveAt(conditionStack.Count - 1);
-		}
-
 
 		protected virtual void ProcessDirective(IList<LexerItemInfo> directives, bool pastFirstSymbol, int line, int column)
 		{
@@ -476,12 +537,17 @@ namespace OpenCSC
 
 			var first = directives[0];
 			var firstItem = first.Item;
-			Action action;
-			actions.TryGetValue(firstItem, out action);
-			if (action != null)
-				action(directives);
+			var directive = firstItem as Directive;
+			if (directive == null)
+			{
+				var iface = firstItem as IDirective;
+				if (iface != null)
+					directive = iface.GetDirective();
+			}
+			if (directive != null)
+				directive.RunDirective(this, directives);
 			else
-				Output.Errors.Add(new DirectiveExpected(first.Line, first.Column, firstItem.Length));
+				Output.Errors.Add(new DirectiveExpected(first));
 		}
 		
 		protected virtual bool IgnoreToken(LexerItem token)
@@ -512,7 +578,7 @@ namespace OpenCSC
 							continue;
 						if (testItem.Line != item.Line)
 							break;
-						Output.Errors.Add(new NotFirstCharacter(item.Line, item.Column, item.Item.Length));
+						Output.Errors.Add(new NotFirstCharacter(item));
 					}
 					tokens.Clear();
 					for (int j = i + 1; j < input.Count; j++)
@@ -537,7 +603,7 @@ namespace OpenCSC
 			if (conditionStack.Count > 0)
 			{
 				var last = input[input.Count - 1];
-				Output.Errors.Add(new EndifExpected(last.Line, last.Column, last.Item.Length));
+				Output.Errors.Add(new EndifExpected(last));
 			}
 			return ret;
 		}
