@@ -5,7 +5,7 @@ namespace OpenCompiler
 	/// <summary>
 	/// Base class for any literal value
 	/// </summary>
-	public abstract class Literal : LexerItem
+	public abstract class Literal : Token
 	{
 		public abstract object Value { get; }
 	}
@@ -220,7 +220,7 @@ namespace OpenCompiler
 		/// Returns zero
 		/// </summary>
 		/// <returns><see cref="Zero"/></returns>
-		public override LexerItem Create()
+		public override Token Create()
 		{
 			return Zero;
 		}
@@ -232,7 +232,7 @@ namespace OpenCompiler
 		/// <param name="hasPoint">Whether it has a (decimal) point</param>
 		/// <param name="numberBase">The recorded number base (10 for decimal)</param>
 		/// <returns>The created instance</returns>
-		public virtual LexerItem Create(double value, bool hasPoint, int numberBase)
+		public virtual Token Create(double value, bool hasPoint, int numberBase)
 		{
 			return new NumberLiteral(value, hasPoint, numberBase);
 		}
@@ -242,7 +242,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>A new numeric literal, <see cref="Zero"/>, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			bool hasPoint;
 			int numberBase = GetNumberBase(lexer, out hasPoint);

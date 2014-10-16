@@ -13,7 +13,7 @@ namespace OpenCompiler
 	{
 		public abstract ErrorLevel ErrorLevel { get; }
 		public abstract int Number { get; }
-		public abstract string Message { get; }
+		public abstract Substring Message { get; }
 		public abstract int Line { get; }
 		public abstract int Column { get; }
 		public abstract int Length { get; }
@@ -37,7 +37,7 @@ namespace OpenCompiler
 			this.length = length;
 		}
 
-		public DefaultCompilerError(LexerItemInfo item)
+		public DefaultCompilerError(TokenInfo item)
 		{
 			this.line = item.Line;
 			this.column = item.Column;
@@ -59,7 +59,7 @@ namespace OpenCompiler
 			get { return column; }
 		}
 
-		public override string Message
+		public override Substring Message
 		{
 			get { return "An error occurred"; }
 		}

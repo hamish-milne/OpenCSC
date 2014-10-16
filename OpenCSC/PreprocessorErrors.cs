@@ -7,7 +7,7 @@ namespace OpenCSC
 {
 	public class InvalidPreprocessorExpression : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Invalid preprocessor expression"; }
 		}
@@ -22,7 +22,7 @@ namespace OpenCSC
 		{
 		}
 
-		public InvalidPreprocessorExpression(LexerItemInfo item)
+		public InvalidPreprocessorExpression(TokenInfo item)
 			: base(item)
 		{
 		}
@@ -30,7 +30,7 @@ namespace OpenCSC
 
 	public class EndOfLineExpected : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Single-line comment or end-of-line expected"; }
 		}
@@ -45,7 +45,7 @@ namespace OpenCSC
 		{
 		}
 
-		public EndOfLineExpected(LexerItemInfo item)
+		public EndOfLineExpected(TokenInfo item)
 			: base(item)
 		{
 		}
@@ -53,7 +53,7 @@ namespace OpenCSC
 
 	public class IdentifierExpected : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Identifier expected"; }
 		}
@@ -68,7 +68,7 @@ namespace OpenCSC
 		{
 		}
 
-		public IdentifierExpected(LexerItemInfo item)
+		public IdentifierExpected(TokenInfo item)
 			: base(item)
 		{
 		}
@@ -76,7 +76,7 @@ namespace OpenCSC
 
 	public class EndifExpected : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "#endif directive expected"; }
 		}
@@ -91,7 +91,7 @@ namespace OpenCSC
 		{
 		}
 
-		public EndifExpected(LexerItemInfo item)
+		public EndifExpected(TokenInfo item)
 			: base(item)
 		{
 		}
@@ -99,7 +99,7 @@ namespace OpenCSC
 
 	public class UnexpectedDirective : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Unexpected preprocessor directive"; }
 		}
@@ -114,7 +114,7 @@ namespace OpenCSC
 		{
 		}
 
-		public UnexpectedDirective(LexerItemInfo item)
+		public UnexpectedDirective(TokenInfo item)
 			: base(item)
 		{
 		}
@@ -122,7 +122,7 @@ namespace OpenCSC
 
 	public class DirectiveExpected : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Preprocessor directive expected"; }
 		}
@@ -137,7 +137,7 @@ namespace OpenCSC
 		{
 		}
 
-		public DirectiveExpected(LexerItemInfo item)
+		public DirectiveExpected(TokenInfo item)
 			: base(item)
 		{
 		}
@@ -145,7 +145,7 @@ namespace OpenCSC
 
 	public class NotFirstCharacter : DefaultCompilerError
 	{
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Preprocessor directives must appear as the first non-whitespace character on a line"; }
 		}
@@ -160,8 +160,48 @@ namespace OpenCSC
 		{
 		}
 
-		public NotFirstCharacter(LexerItemInfo item)
+		public NotFirstCharacter(TokenInfo item)
 			: base(item)
+		{
+		}
+	}
+
+	public class UserError : DefaultCompilerError
+	{
+		protected Substring message;
+
+		public override Substring Message
+		{
+			get { return message; }
+		}
+
+		public UserError(Substring message, int line, int column, int length)
+			: base(line, column, length)
+		{
+			this.message = message;
+		}
+
+		public UserError(Substring message, TokenInfo item)
+			: base(item)
+		{
+			this.message = message;
+		}
+	}
+
+	public class UserWarning : UserError
+	{
+		public override ErrorLevel ErrorLevel
+		{
+			get { return ErrorLevel.Warning; }
+		}
+
+		public UserWarning(Substring message, int line, int column, int length)
+			: base(message, line, column, length)
+		{
+		}
+
+		public UserWarning(Substring message, TokenInfo item)
+			: base(message, item)
 		{
 		}
 	}

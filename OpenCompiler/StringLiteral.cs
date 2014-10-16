@@ -9,7 +9,7 @@ namespace OpenCompiler
 		{
 		}
 
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Unrecognized escape sequence"; }
 		}
@@ -27,7 +27,7 @@ namespace OpenCompiler
 		{
 		}
 
-		public override string Message
+		public override Substring Message
 		{
 			get { return "Newline in constant"; }
 		}
@@ -177,7 +177,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>A new string literal, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			if (lexer.Current != StartChar)
 				return null;
@@ -220,7 +220,7 @@ namespace OpenCompiler
 		/// Returns an empty instance
 		/// </summary>
 		/// <returns><see cref="Empty"/></returns>
-		public override LexerItem Create()
+		public override Token Create()
 		{
 			return Empty;
 		}
@@ -230,7 +230,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="argument">The string value</param>
 		/// <returns>The created instance</returns>
-		public override LexerItem Create(Substring argument)
+		public override Token Create(Substring argument)
 		{
 			return new CharLiteral(argument);
 		}
@@ -267,7 +267,7 @@ namespace OpenCompiler
 		/// Returns an empty instance
 		/// </summary>
 		/// <returns><see cref="Empty"/></returns>
-		public override LexerItem Create()
+		public override Token Create()
 		{
 			return Empty;
 		}
@@ -277,7 +277,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="argument">The string value</param>
 		/// <returns>The created instance</returns>
-		public override LexerItem Create(Substring argument)
+		public override Token Create(Substring argument)
 		{
 			return new StringLiteral(argument);
 		}
@@ -330,7 +330,7 @@ namespace OpenCompiler
 		/// Returns an empty instance
 		/// </summary>
 		/// <returns><see cref="Empty"/></returns>
-		public override LexerItem Create()
+		public override Token Create()
 		{
 			return Empty;
 		}
@@ -340,7 +340,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="argument">The string value</param>
 		/// <returns>The created instance</returns>
-		public override LexerItem Create(Substring argument)
+		public override Token Create(Substring argument)
 		{
 			return new StringLiteral(argument);
 		}

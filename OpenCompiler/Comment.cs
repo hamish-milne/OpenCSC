@@ -3,7 +3,7 @@
 	/// <summary>
 	/// Base class for comments
 	/// </summary>
-	public abstract class Comment : LexerItem
+	public abstract class Comment : Token
 	{
 		/// <summary>
 		/// The raw commented text
@@ -76,7 +76,7 @@
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>A line comment item, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			lexer.EatWhitespace();
 			for (int i = 0; i < NumChars; i++)
@@ -165,7 +165,7 @@
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>A block comment item, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			if (lexer.Current == StartChar && lexer[1] == SecondChar)
 			{

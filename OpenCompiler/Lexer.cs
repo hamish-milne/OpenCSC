@@ -199,7 +199,7 @@ namespace OpenCompiler
 	/// <summary>
 	/// A lexed code item, or a template for one
 	/// </summary>
-	public abstract class LexerItem : IComparable<LexerItem>
+	public abstract class Token : IComparable<Token>
 	{
 		/// <summary>
 		/// The first character for this item, or '\0' if it can vary
@@ -220,7 +220,7 @@ namespace OpenCompiler
 		/// </summary>
 		public virtual int Priority { get { return 0; } }
 
-		public virtual int CompareTo(LexerItem other)
+		public virtual int CompareTo(Token other)
 		{
 			if (other == null)
 				return -1;
@@ -234,13 +234,13 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="lexer">The current lexer object</param>
 		/// <returns>The lexed item, or <c>null</c> if none exists at this point</returns>
-		public abstract LexerItem CheckPresence(Lexer lexer);
+		public abstract Token CheckPresence(Lexer lexer);
 
 		/// <summary>
 		/// Gets a lexed item of the required type. By default, returns <c>this</c>
 		/// </summary>
-		/// <returns>A LexerItem of the required type</returns>
-		public virtual LexerItem Create()
+		/// <returns>A Token of the required type</returns>
+		public virtual Token Create()
 		{
 			return this;
 		}
@@ -249,8 +249,8 @@ namespace OpenCompiler
 		/// Gets a lexed item with the given substring argument
 		/// </summary>
 		/// <param name="argument">The portion of code for which this item is for</param>
-		/// <returns>A LexerItem representing the given portion of code</returns>
-		public virtual LexerItem Create(Substring argument)
+		/// <returns>A Token representing the given portion of code</returns>
+		public virtual Token Create(Substring argument)
 		{
 			return Create();
 		}
@@ -259,7 +259,7 @@ namespace OpenCompiler
 	/// <summary>
 	/// Represents one or more whitespace characters
 	/// </summary>
-	public class WhitespaceToken : LexerItem
+	public class Whitespace : Token
 	{
 		public override bool UseWhitespace
 		{
@@ -271,7 +271,7 @@ namespace OpenCompiler
 			get { return 1; }
 		}
 
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			if (lexer.EatWhitespace() > 0)
 				return this;
@@ -282,10 +282,10 @@ namespace OpenCompiler
 	/// <summary>
 	/// Base class for single character items
 	/// </summary>
-	public abstract class SingleChar : LexerItem
+	public abstract class SingleChar : Token
 	{
 		/// <inheritdoc/>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			if (lexer.Current == StartChar)
 			{
@@ -355,14 +355,14 @@ namespace OpenCompiler
 	}
 
 	/// <summary>
-	/// Stores a LexerItem, plus line and column information
+	/// Stores a Token, plus line and column information
 	/// </summary>
-	public struct LexerItemInfo
+	public struct TokenInfo
 	{
 		/// <summary>
-		/// The LexerItem in question
+		/// The Token in question
 		/// </summary>
-		public LexerItem Item;
+		public Token Item;
 
 		/// <summary>
 		/// The line the item is found on
@@ -380,7 +380,7 @@ namespace OpenCompiler
 		/// <param name="item"></param>
 		/// <param name="line"></param>
 		/// <param name="column"></param>
-		public LexerItemInfo(LexerItem item, int line, int column)
+		public TokenInfo(Token item, int line, int column)
 		{
 			Item = item;
 			Line = line;
@@ -401,7 +401,7 @@ namespace OpenCompiler
 	/// Takes in a raw source file, and outputs a list of objects that can be easily parsed
 	/// into code structures
 	/// </summary>
-	public abstract class Lexer : Pipeline<string, IList<LexerItemInfo>>, IEnumerable<LexerItem>
+	public abstract class Lexer : Pipeline<string, IList<TokenInfo>>, IEnumerable<Token>
 	{
 		/// <summary>
 		/// The current position of the lexer in the source
@@ -417,6 +417,11 @@ namespace OpenCompiler
 		/// The current column number
 		/// </summary>
 		public abstract int Column { get; }
+
+		/// <summary>
+		/// The list of processed tokens
+		/// </summary>
+		public abstract IList<TokenInfo> Processed { get; }
 
 		/// <summary>
 		/// Advances the position within the content by one character
@@ -456,13 +461,13 @@ namespace OpenCompiler
 		/// <summary>
 		/// The list of item templates that can be lexed
 		/// </summary>
-		public abstract IList<LexerItem> Templates { get; }
+		public abstract IList<Token> Templates { get; }
 
 		/// <summary>
 		/// Adds an item template to the list
 		/// </summary>
 		/// <param name="item"></param>
-		public virtual void Add(LexerItem item)
+		public virtual void Add(Token item)
 		{
 			Templates.Add(item);
 		}
@@ -489,7 +494,7 @@ namespace OpenCompiler
 		/// Gets an enumerator to iterate through the template list
 		/// </summary>
 		/// <returns></returns>
-		public virtual IEnumerator<LexerItem> GetEnumerator()
+		public virtual IEnumerator<Token> GetEnumerator()
 		{
 			return Templates.GetEnumerator();
 		}
@@ -534,7 +539,12 @@ namespace OpenCompiler
 		/// <summary>
 		/// Direct access to the template list
 		/// </summary>
-		protected List<LexerItem> items;
+		protected List<Token> templates;
+
+		/// <summary>
+		/// Direct access to the processing list
+		/// </summary>
+		protected List<TokenInfo> processed;
 
 		/// <summary>
 		/// Sets the string input, removing null bytes and converting line endings to LF for simplicity
@@ -574,51 +584,6 @@ namespace OpenCompiler
 			column = 0;
 		}
 
-		public class UnexpectedCharacterError : CompilerError
-		{
-			protected int line;
-			protected int column;
-
-			public override ErrorLevel ErrorLevel
-			{
-				get { return ErrorLevel.Error; }
-			}
-
-			public override int Number
-			{
-				get { return 1519; }
-			}
-
-			public override string Message
-			{
-				get { return "Unexpected character: " + Character; }
-			}
-
-			public override int Line
-			{
-				get { return line; }
-			}
-
-			public override int Column
-			{
-				get { return column; }
-			}
-
-			public override int Length
-			{
-				get { return 1; }
-			}
-
-			public virtual char Character { get; set; }
-
-			public UnexpectedCharacterError(char character, int line, int column)
-			{
-				Character = character;
-				this.line = line;
-				this.column = column;
-			}
-		}
-
 		/// <summary>
 		/// Lexes the string
 		/// </summary>
@@ -626,28 +591,28 @@ namespace OpenCompiler
 		/// <exception cref="InvalidOperationException">There are no templates or no input</exception>
 		/// <exception cref="CodeException">Use this for user errors</exception>
 		/// <exception cref="EndOfFileException">The lexer unexpectedly reached the end of the stream</exception>
-		public override IList<LexerItemInfo> Run()
+		public override IList<TokenInfo> Run()
 		{
 			// Input validation
-			if (items == null)
+			if (templates == null)
 				throw new InvalidOperationException("No item list");
 			if (content == null)
 				throw new InvalidOperationException("No input");
 
 			// Sort by priority
-			items.Sort();
+			templates.Sort();
 
 			// Add items to successive dictionaries, if they have start characters
 			// If not, or they use whitespace, add them to normal lists to iterate
 			// through manually.
 			int oldPriority = 0;
-			var charMaps = new List<Dictionary<char, LexerItem>>();
-			Dictionary<char, LexerItem> thisMap = null;
-			var manual = new List<LexerItem>();
-			var whitespace = new List<LexerItem>();
-			for (int i = 0; i < items.Count; i++)
+			var charMaps = new List<Dictionary<char, Token>>();
+			Dictionary<char, Token> thisMap = null;
+			var manual = new List<Token>();
+			var whitespace = new List<Token>();
+			for (int i = 0; i < templates.Count; i++)
 			{
-				var item = items[i];
+				var item = templates[i];
 				if (item.StartChar == '\0' || item.UseWhitespace)
 				{
 					(item.UseWhitespace ? whitespace : manual).Add(item);
@@ -655,7 +620,7 @@ namespace OpenCompiler
 				}
 				if (i == 0 || item.Priority < oldPriority)
 				{
-					thisMap = new Dictionary<char, LexerItem>();
+					thisMap = new Dictionary<char, Token>();
 					charMaps.Add(thisMap);
 				}
 				oldPriority = item.Priority;
@@ -664,7 +629,7 @@ namespace OpenCompiler
 			}
 
 			// Iterate through content
-			var ret = new List<LexerItemInfo>(content.Length / 4);
+			Processed.Clear();
 			position = 0;
 			int numWhitespace = 0;
 			while (position < content.Length)
@@ -672,7 +637,7 @@ namespace OpenCompiler
 				int startPos = position;
 				int rLine = Line;
 				int rCol = Column;
-				LexerItem toAdd = null;
+				Token toAdd = null;
 
 				// First check items which use whitespace
 				// (easier this way, but not quite as efficient)
@@ -692,7 +657,7 @@ namespace OpenCompiler
 						for (int i = 0; i < charMaps.Count; i++)
 						{
 							thisMap = charMaps[i];
-							LexerItem toCheck;
+							Token toCheck;
 							if (!thisMap.TryGetValue(c, out toCheck))
 								continue;
 							if (CheckSingle(toCheck, ref toAdd))
@@ -712,7 +677,7 @@ namespace OpenCompiler
 				// If an item was found, add it to the list
 				if (toAdd != null)
 				{
-					ret.Add(new LexerItemInfo(toAdd, Line, Column));
+					Processed.Add(new TokenInfo(toAdd, Line, Column));
 					// If it has zero length (no characters eaten) an infinite loop is possible,
 					// so we should throw here
 					if (position == startPos)
@@ -734,10 +699,10 @@ namespace OpenCompiler
 					}
 				}
 			}
-			return ret;
+			return Processed;
 		}
 
-		private bool CheckSingle(LexerItem toCheck, ref LexerItem toAdd)
+		private bool CheckSingle(Token toCheck, ref Token toAdd)
 		{
 			var preCheck = position;
 			toAdd = toCheck.CheckPresence(this);
@@ -765,14 +730,24 @@ namespace OpenCompiler
 			get { return column; }
 		}
 
-		/// <inheritdoc/>
-		public override IList<LexerItem> Templates
+		public override IList<TokenInfo> Processed
 		{
 			get
 			{
-				if (items == null)
-					items = new List<LexerItem>();
-				return items;
+				if (processed == null)
+					processed = new List<TokenInfo>();
+				return processed;
+			}
+		}
+
+		/// <inheritdoc/>
+		public override IList<Token> Templates
+		{
+			get
+			{
+				if (templates == null)
+					templates = new List<Token>();
+				return templates;
 			}
 		}
 

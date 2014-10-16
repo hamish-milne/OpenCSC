@@ -41,7 +41,7 @@ test4
 					Console.WriteLine(item);
 				}
 				Console.WriteLine("===");
-				var preproc = new Preprocessor();
+				var preproc = new CSharpPreprocessor();
 				preproc.Output = lexer.Output;
 				preproc.SetInput(result);
 				result = preproc.Run();

@@ -7,7 +7,7 @@ namespace OpenCompiler
 	/// <summary>
 	/// Base class for a word - an identifier or fixed keyword
 	/// </summary>
-	public abstract class Word : LexerItem
+	public abstract class Word : Token
 	{
 		/// <summary>
 		/// The text itself
@@ -57,7 +57,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>A created word item, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			bool first = true;
 			int startPos = lexer.Position;
@@ -139,7 +139,7 @@ namespace OpenCompiler
 		/// Not supported. An identifier must have a string value
 		/// </summary>
 		/// <returns></returns>
-		public override LexerItem Create()
+		public override Token Create()
 		{
 			throw new NotSupportedException();
 		}
@@ -149,7 +149,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="argument">The string value</param>
 		/// <returns>An Identifier instance</returns>
-		public override LexerItem Create(Substring argument)
+		public override Token Create(Substring argument)
 		{
 			return new Identifier(argument);
 		}
@@ -167,7 +167,7 @@ namespace OpenCompiler
 		/// <returns>This object</returns>
 		/// <exception cref="ArgumentException">The argument was not
 		/// equal to the keyword value</exception>
-		public override LexerItem Create(Substring argument)
+		public override Token Create(Substring argument)
 		{
 			if (argument == Value)
 				return this;
@@ -180,7 +180,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>This object, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			for (int i = 0; i < Value.Length; i++)
 				if (lexer[i] != Value[i])
@@ -238,7 +238,7 @@ namespace OpenCompiler
 		/// Not supported
 		/// </summary>
 		/// <returns></returns>
-		public override LexerItem Create()
+		public override Token Create()
 		{
 			throw new NotSupportedException();
 		}
@@ -248,7 +248,7 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="argument">The string value</param>
 		/// <returns>Usually a keyword or identifier as necessary</returns>
-		public override LexerItem Create(Substring argument)
+		public override Token Create(Substring argument)
 		{
 			Word word;
 			if (keywordMap.TryGetValue(argument, out word))

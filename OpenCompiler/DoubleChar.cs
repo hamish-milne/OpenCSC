@@ -20,7 +20,7 @@
 		/// </summary>
 		/// <param name="lexer">The lexer object</param>
 		/// <returns>This double character item, or <c>null</c></returns>
-		public override LexerItem CheckPresence(Lexer lexer)
+		public override Token CheckPresence(Lexer lexer)
 		{
 			if (lexer.Current == StartChar && lexer[1] == SecondChar)
 			{
