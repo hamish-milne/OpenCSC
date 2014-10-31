@@ -302,36 +302,6 @@ namespace OpenCompiler
 	}
 
 	/// <summary>
-	/// Base class for braces
-	/// </summary>
-	public abstract class Brace : SingleChar
-	{
-		/// <summary>
-		/// Checks if the given brace is of the same brace type
-		/// </summary>
-		/// <param name="brace">The object to check</param>
-		/// <returns><c>true</c> if they are of the same type, otherwise <c>false</c></returns>
-		/// <exception cref="ArgumentNullException"><paramref name="brace"/> is <c>null</c></exception>
-		public abstract bool IsBraceType(Brace brace);
-
-		/// <summary>
-		/// Checks if the given brace is the closing brace of this type
-		/// </summary>
-		/// <param name="brace">The object to check</param>
-		/// <returns><c>true</c> if it is the closing brace, otherwise <c>false</c></returns>
-		/// <exception cref="ArgumentNullException"><paramref name="brace"/> is <c>null</c></exception>
-		public abstract bool IsCloseBrace(Brace brace);
-
-		/// <summary>
-		/// Checks if the given brace is the opening brace of this type
-		/// </summary>
-		/// <param name="brace">The object to check</param>
-		/// <returns><c>true</c> if it is the opening brace, otherwise <c>false</c></returns>
-		/// <exception cref="ArgumentNullException"><paramref name="brace"/> is <c>null</c></exception>
-		public abstract bool IsOpenBrace(Brace brace);
-	}
-
-	/// <summary>
 	/// Thrown when the lexer unexpectedly reaches the end of the file
 	/// </summary>
 	public class EndOfFileException : CodeException

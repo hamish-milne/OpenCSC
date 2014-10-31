@@ -134,6 +134,14 @@ namespace OpenCompiler
 		void RunDirective(Preprocessor pp, IList<TokenInfo> directives);
 	}
 
+	/// <summary>
+	/// Base class for preprocessor directives
+	/// </summary>
+	public abstract class Directive : Keyword, IDirective
+	{
+		public abstract void RunDirective(Preprocessor parent, IList<TokenInfo> directives);
+	}
+
 	public enum WarningLevel
 	{
 		Error = -1,
@@ -141,16 +149,43 @@ namespace OpenCompiler
 		Disabled = 1
 	}
 
+	public struct LineError
+	{
+		public int Line;
+		public int Error;
+
+		public LineError(int line, int error)
+		{
+			Line = line;
+			Error = error;
+		}
+
+		public override int GetHashCode()
+		{
+			return (509 * Line) + Error; 
+		}
+
+		public override bool Equals(object obj)
+		{
+			if(obj is LineError)
+			{
+				var o = (LineError)obj;
+				return (o.Line == Line && o.Error == Error);
+			}
+			return false;
+		}
+	}
+
 	public abstract class PreprocessorSettings
 	{
 		public abstract ICollection<Substring> Defines { get; }
-		public abstract IDictionary<int, WarningLevel> Warnings { get; }
+		public abstract IDictionary<LineError, WarningLevel> Warnings { get; }
 	}
 
 	public class DefaultPreprocessorSettings : PreprocessorSettings
 	{
 		protected ICollection<Substring> defines;
-		protected IDictionary<int, WarningLevel> warnings;
+		protected IDictionary<LineError, WarningLevel> warnings;
 
 		public override ICollection<Substring> Defines
 		{
@@ -162,12 +197,12 @@ namespace OpenCompiler
 			}
 		}
 
-		public override IDictionary<int, WarningLevel> Warnings
+		public override IDictionary<LineError, WarningLevel> Warnings
 		{
 			get
 			{
 				if (warnings == null)
-					warnings = new Dictionary<int, WarningLevel>();
+					warnings = new Dictionary<LineError, WarningLevel>();
 				return warnings;
 			}
 		}
@@ -209,6 +244,8 @@ namespace OpenCompiler
 		IInput<PreprocessorSettings>
 	{
 		public abstract PreprocessorSettings Settings { get; protected set; }
+
+		public abstract bool PastFirstSymbol { get; }
 
 		public abstract IList<ConditionStackElement> ConditionStack { get; }
 

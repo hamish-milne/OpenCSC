@@ -50,14 +50,6 @@ namespace OpenCSC
 		}
 	}
 
-	/// <summary>
-	/// Base class for preprocessor directives
-	/// </summary>
-	public abstract class Directive : Keyword, IDirective
-	{
-		public abstract void RunDirective(Preprocessor parent, IList<TokenInfo> directives);
-	}
-
 
 	/// <summary>
 	/// Else-if directive
@@ -280,7 +272,13 @@ namespace OpenCSC
 
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
-			throw new NotSupportedException();
+			var first = directives[1];
+			var firstItem = first.Item;
+			var directive = firstItem as IDirective;
+			if (directive != null)
+				directive.RunDirective(parent, directives);
+			else
+				parent.Output.Errors.Add(new DirectiveExpected(first));
 		}
 	}
 
@@ -303,6 +301,12 @@ namespace OpenCSC
 		protected CompilerOutput output;
 		protected IList<TokenInfo> input;
 		protected List<ConditionStackElement> conditionStack;
+		protected bool pastFirstSymbol;
+
+		public override bool PastFirstSymbol
+		{
+			get { return pastFirstSymbol; }
+		}
 
 		public override IList<ConditionStackElement> ConditionStack
 		{
@@ -481,8 +485,13 @@ namespace OpenCSC
 				Output.Errors.Add(new UnexpectedDirective(directives[num]));
 			return directives.Count < num;
 		}
+		
+		public override bool IgnoreToken(Token token)
+		{
+			return token is Whitespace || token is Comment;
+		}
 
-		protected virtual void ProcessDirective(IList<TokenInfo> directives, bool pastFirstSymbol, int line, int column)
+		public void ProcessDirective(IList<TokenInfo> directives, bool pastFirstSymbol, int line, int column)
 		{
 			if (directives == null)
 				throw new ArgumentNullException("directives");
@@ -499,11 +508,6 @@ namespace OpenCSC
 				directive.RunDirective(this, directives);
 			else
 				Output.Errors.Add(new DirectiveExpected(first));
-		}
-		
-		public override bool IgnoreToken(Token token)
-		{
-			return token is Whitespace || token is Comment;
 		}
 
 		public override IList<TokenInfo> Run()
