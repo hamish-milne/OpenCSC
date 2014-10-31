@@ -193,20 +193,39 @@ namespace OpenCSC
 
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
-			parent.Output.Errors.Add(new UserWarning(TextValue, directives[0]));
+			if(directives[0].Item is Pragma)
+			{
+
+			} else
+				parent.Output.Errors.Add(new UserWarning(TextValue, directives[0]));
 		}
 	}
 
-	public class Disable : Keyword
+	public abstract class SetWarningLevel : Keyword
 	{
+		public abstract WarningLevel Level { get; }
+	}
+
+	public class Disable : SetWarningLevel
+	{
+		public override WarningLevel Level
+		{
+			get { return WarningLevel.Disabled; }
+		}
+
 		public override Substring Value
 		{
 			get { return "disable"; }
 		}
 	}
 
-	public class Restore : Keyword
+	public class Restore : SetWarningLevel
 	{
+		public override WarningLevel Level
+		{
+			get { return WarningLevel.Normal; }
+		}
+
 		public override Substring Value
 		{
 			get { return "restore"; }
@@ -272,13 +291,20 @@ namespace OpenCSC
 
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
-			var first = directives[1];
-			var firstItem = first.Item;
-			var directive = firstItem as IDirective;
-			if (directive != null)
-				directive.RunDirective(parent, directives);
+			if(directives.Count < 2)
+			{
+				parent.Output.Errors.Add(new UnrecognizedPragma(directives[0]));
+			}
 			else
-				parent.Output.Errors.Add(new DirectiveExpected(first));
+			{
+				var first = directives[1];
+				var firstItem = first.Item;
+				var directive = firstItem as IDirective;
+				if (directive != null)
+					directive.RunDirective(parent, directives);
+				else
+					parent.Output.Errors.Add(new UnrecognizedPragma(first));
+			}
 		}
 	}
 

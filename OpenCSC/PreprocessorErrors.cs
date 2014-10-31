@@ -175,6 +175,11 @@ namespace OpenCSC
 			get { return message; }
 		}
 
+		public override int Number
+		{
+			get { return 1029; }
+		}
+
 		public UserError(Substring message, int line, int column, int length)
 			: base(line, column, length)
 		{
@@ -195,6 +200,11 @@ namespace OpenCSC
 			get { return ErrorLevel.Warning; }
 		}
 
+		public override int Number
+		{
+			get { return 1030; }
+		}
+
 		public UserWarning(Substring message, int line, int column, int length)
 			: base(message, line, column, length)
 		{
@@ -202,6 +212,34 @@ namespace OpenCSC
 
 		public UserWarning(Substring message, TokenInfo item)
 			: base(message, item)
+		{
+		}
+	}
+
+	public class UnrecognizedPragma : DefaultCompilerError
+	{
+		public override ErrorLevel ErrorLevel
+		{
+			get { return ErrorLevel.Warning; }
+		}
+
+		public override int Number
+		{
+			get { return 1633; }
+		}
+
+		public override Substring Message
+		{
+			get { return "Unrecognized #pragma directive"; }
+		}
+
+		public UnrecognizedPragma(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public UnrecognizedPragma(TokenInfo item)
+			: base(item)
 		{
 		}
 	}
