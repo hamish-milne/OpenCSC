@@ -18,6 +18,10 @@ namespace OpenCompiler
 		public abstract int Column { get; }
 		public abstract int Length { get; }
 
+		public virtual void TreatAsError()
+		{
+		}
+
 		public override string ToString()
 		{
 			return Number + ": " + Message + " at line " + Line + ", column " + Column;
@@ -72,6 +76,31 @@ namespace OpenCompiler
 		public override int Number
 		{
 			get { return 0; }
+		}
+	}
+
+	public class DefaultCompilerWarning : DefaultCompilerError
+	{
+		protected ErrorLevel errorLevel = ErrorLevel.Warning;
+
+		public override ErrorLevel ErrorLevel
+		{
+			get { return errorLevel; }
+		}
+
+		public override void TreatAsError()
+		{
+			errorLevel = ErrorLevel.Error;
+		}
+
+		public DefaultCompilerWarning(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public DefaultCompilerWarning(TokenInfo item)
+			: base(item)
+		{
 		}
 	}
 }

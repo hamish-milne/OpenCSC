@@ -245,7 +245,21 @@ namespace OpenCompiler
 	{
 		public abstract PreprocessorSettings Settings { get; protected set; }
 
+		public abstract IDictionary<int, WarningLevel> CurrentWarningLevels { get; }
+
 		public abstract bool PastFirstSymbol { get; }
+
+		public virtual void AddError(CompilerError error)
+		{
+			if (error == null)
+				throw new ArgumentNullException("error");
+			WarningLevel level;
+			Settings.Warnings.TryGetValue(new LineError(error.Line, error.Number), out level);
+			if (level == WarningLevel.Error)
+				error.TreatAsError();
+			if (level != WarningLevel.Disabled)
+				Output.Errors.Add(error);
+		}
 
 		public abstract IList<ConditionStackElement> ConditionStack { get; }
 

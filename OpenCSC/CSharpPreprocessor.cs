@@ -45,7 +45,7 @@ namespace OpenCSC
 				valid = !elem.Final;
 			}
 			if (!valid)
-				parent.Output.Errors.Add(new UnexpectedDirective(directives[0]));
+				parent.AddError(new UnexpectedDirective(directives[0]));
 			cs[lastPos] = ConditionStackElement.DoElse(cs[lastPos]);
 		}
 	}
@@ -83,7 +83,7 @@ namespace OpenCSC
 		{
 			parent.CheckExcessParams(directives, 1);
 			if (parent.ConditionStack.Count < 1)
-				parent.Output.Errors.Add(new UnexpectedDirective(directives[0]));
+				parent.AddError(new UnexpectedDirective(directives[0]));
 			else
 				parent.ConditionStack.RemoveAt(parent.ConditionStack.Count - 1);
 		}
@@ -95,13 +95,13 @@ namespace OpenCSC
 		{
 			if (directives.Count < 2)
 			{
-				parent.Output.Errors.Add(new InvalidPreprocessorExpression(directives[0]));
+				parent.AddError(new InvalidPreprocessorExpression(directives[0]));
 				return;
 			}
 			var item = directives[1].Item as Word;
 			if (item == null)
 			{
-				parent.Output.Errors.Add(new InvalidPreprocessorExpression(directives[1]));
+				parent.AddError(new InvalidPreprocessorExpression(directives[1]));
 				return;
 			}
 			parent.CheckExcessParams(directives, 2);
@@ -190,17 +190,49 @@ namespace OpenCSC
 		{
 			get { return "warning"; }
 		}
-
+		
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
+			if (!parent.IncludeCode)
+				return;
 			if(directives[0].Item is Pragma)
 			{
-
-			} else
-				parent.Output.Errors.Add(new UserWarning(TextValue, directives[0]));
+				var warn = directives[1];
+				if (directives.Count < 3)
+					parent.AddError(new ExpectedDisableOrRestore(warn.Line, warn.Column + warn.Item.Length, 1));
+				else
+				{
+					var getLevel = directives[2].Item as SetWarningLevel;
+					if (getLevel == null)
+						parent.AddError(new ExpectedDisableOrRestore(directives[2]));
+					else if(directives.Count > 3)
+					{
+						int i = 3;
+						do
+						{
+							var num = directives[i].Item as NumberLiteral;
+							if (num == null || num.HasPoint || num.NumberValue < 0 || num.NumberBase != 10)
+								parent.AddError(new InvalidNumber(directives[i]));
+							else // TODO: Add "Not a valid warning number"
+								parent.CurrentWarningLevels[(int)num.NumberValue] = getLevel.Level;
+							i++;
+							if (i >= directives.Count)
+								break;
+							if(!(directives[i].Item is Comma))
+							{
+								parent.AddError(new EndOfLineExpectedWarning(directives[i]));
+								break;
+							}
+							i++;
+						} while (i < directives.Count);
+					}
+				}
+			}
+			else
+				parent.AddError(new UserWarning(TextValue, directives[0]));
 		}
 	}
-
+	
 	public abstract class SetWarningLevel : Keyword
 	{
 		public abstract WarningLevel Level { get; }
@@ -241,7 +273,8 @@ namespace OpenCSC
 
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
-			parent.Output.Errors.Add(new UserError(TextValue, directives[0]));
+			if(parent.IncludeCode)
+				parent.AddError(new UserError(TextValue, directives[0]));
 		}
 	}
 
@@ -293,7 +326,7 @@ namespace OpenCSC
 		{
 			if(directives.Count < 2)
 			{
-				parent.Output.Errors.Add(new UnrecognizedPragma(directives[0]));
+				parent.AddError(new UnrecognizedPragma(directives[0]));
 			}
 			else
 			{
@@ -303,7 +336,7 @@ namespace OpenCSC
 				if (directive != null)
 					directive.RunDirective(parent, directives);
 				else
-					parent.Output.Errors.Add(new UnrecognizedPragma(first));
+					parent.AddError(new UnrecognizedPragma(first));
 			}
 		}
 	}
@@ -328,6 +361,7 @@ namespace OpenCSC
 		protected IList<TokenInfo> input;
 		protected List<ConditionStackElement> conditionStack;
 		protected bool pastFirstSymbol;
+		protected IDictionary<int, WarningLevel> currentWarningLevels;
 
 		public override bool PastFirstSymbol
 		{
@@ -355,6 +389,16 @@ namespace OpenCSC
 			protected set
 			{
 				settings = value;
+			}
+		}
+
+		public override IDictionary<int, WarningLevel> CurrentWarningLevels
+		{
+			get
+			{
+				if (currentWarningLevels == null)
+					currentWarningLevels = new Dictionary<int, WarningLevel>();
+				return currentWarningLevels;
 			}
 		}
 
@@ -544,6 +588,7 @@ namespace OpenCSC
 			var ret = new List<TokenInfo>(input.Count);
 			bool pastFirstSymbol = false;
 			var tokens = new List<TokenInfo>();
+			int lastLine = 0;
 			for (int i = 0; i < input.Count; i++)
 			{
 				var item = input[i];
@@ -578,6 +623,10 @@ namespace OpenCSC
 					if (IncludeCode)
 						ret.Add(item);						
 				}
+				if (lastLine != item.Line && IncludeCode)
+					foreach (var pair in CurrentWarningLevels)
+						Settings.Warnings[new LineError(lastLine, pair.Key)] = pair.Value;
+				lastLine = item.Line;
 			}
 			if (ConditionStack.Count > 0)
 			{

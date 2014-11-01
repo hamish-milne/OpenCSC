@@ -51,6 +51,29 @@ namespace OpenCSC
 		}
 	}
 
+	public class EndOfLineExpectedWarning : DefaultCompilerWarning
+	{
+		public override Substring Message
+		{
+			get { return "Single-line comment or end-of-line expected"; }
+		}
+
+		public override int Number
+		{
+			get { return 1696; }
+		}
+
+		public EndOfLineExpectedWarning(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public EndOfLineExpectedWarning(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
+
 	public class IdentifierExpected : DefaultCompilerError
 	{
 		public override Substring Message
@@ -195,9 +218,16 @@ namespace OpenCSC
 
 	public class UserWarning : UserError
 	{
+		protected ErrorLevel errorLevel = ErrorLevel.Warning;
+
 		public override ErrorLevel ErrorLevel
 		{
-			get { return ErrorLevel.Warning; }
+			get { return errorLevel; }
+		}
+
+		public override void TreatAsError()
+		{
+			errorLevel = ErrorLevel.Error;
 		}
 
 		public override int Number
@@ -216,13 +246,8 @@ namespace OpenCSC
 		}
 	}
 
-	public class UnrecognizedPragma : DefaultCompilerError
+	public class UnrecognizedPragma : DefaultCompilerWarning
 	{
-		public override ErrorLevel ErrorLevel
-		{
-			get { return ErrorLevel.Warning; }
-		}
-
 		public override int Number
 		{
 			get { return 1633; }
@@ -239,6 +264,52 @@ namespace OpenCSC
 		}
 
 		public UnrecognizedPragma(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
+	
+	public class ExpectedDisableOrRestore : DefaultCompilerWarning
+	{
+		public override int Number
+		{
+			get { return 1634; }
+		}
+
+		public override Substring Message
+		{
+			get { return "Expected disable or restore"; }
+		}
+
+		public ExpectedDisableOrRestore(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public ExpectedDisableOrRestore(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
+
+	public class InvalidNumber : DefaultCompilerWarning
+	{
+		public override int Number
+		{
+			get { return 1692; }
+		}
+
+		public override Substring Message
+		{
+			get { return "Invalid number"; }
+		}
+
+		public InvalidNumber(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public InvalidNumber(TokenInfo item)
 			: base(item)
 		{
 		}
