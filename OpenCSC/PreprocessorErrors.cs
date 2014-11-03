@@ -314,4 +314,27 @@ namespace OpenCSC
 		{
 		}
 	}
+
+	public class MissingLineNumber : DefaultCompilerError
+	{
+		public override int Number
+		{
+			get { return 1576; }
+		}
+
+		public override Substring Message
+		{
+			get { return "The line number specified for #line directive is missing or invalid"; }
+		}
+
+		public MissingLineNumber(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public MissingLineNumber(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
 }

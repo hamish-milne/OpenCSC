@@ -50,6 +50,21 @@ namespace OpenCSC
 		}
 	}
 
+	public class Default : Keyword
+	{
+		public override Substring Value
+		{
+			get { return "default"; }
+		}
+	}
+
+	public class Hidden : Keyword
+	{
+		public override Substring Value
+		{
+			get { return "hidden"; }
+		}
+	}
 
 	/// <summary>
 	/// Else-if directive
@@ -232,6 +247,20 @@ namespace OpenCSC
 				parent.AddError(new UserWarning(TextValue, directives[0]));
 		}
 	}
+
+	public class Error : OutputDirective
+	{
+		public override Substring Value
+		{
+			get { return "error"; }
+		}
+
+		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
+		{
+			if (parent.IncludeCode)
+				parent.AddError(new UserError(TextValue, directives[0]));
+		}
+	}
 	
 	public abstract class SetWarningLevel : Keyword
 	{
@@ -264,20 +293,6 @@ namespace OpenCSC
 		}
 	}
 
-	public class Error : OutputDirective
-	{
-		public override Substring Value
-		{
-			get { return "error"; }
-		}
-
-		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
-		{
-			if(parent.IncludeCode)
-				parent.AddError(new UserError(TextValue, directives[0]));
-		}
-	}
-
 	public class Line : Directive
 	{
 		public override Substring Value
@@ -287,7 +302,51 @@ namespace OpenCSC
 
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
-			throw new NotImplementedException();
+			if (directives.Count < 2)
+			{
+				parent.AddError(new InvalidNumber(directives[0].Line,
+					directives[0].Column + directives[0].Item.Length, 1));
+				return;
+			}
+			else
+			{
+				var item = directives[1].Item;
+				var num = directives[1].Item as NumberLiteral;
+				if(directives.Count > 2 && (item is Default || item is Hidden))
+				{
+					parent.AddError(new EndOfLineExpected(directives[1]));
+				}
+				if(item is Default)
+				{
+					parent.DebugHide = false;
+					parent.ApparentLineNumber = directives[1].Line;
+					parent.ApparentFileName = null;
+				} else if(item is Hidden)
+				{
+					parent.DebugHide = true;
+				}
+				else
+				{
+					if (num == null || num.HasPoint || num.NumberValue < 0)
+					{
+						parent.AddError(new InvalidNumber(directives[1]));
+						return;
+					}
+					parent.ApparentLineNumber = (int)num.NumberValue;
+					if (directives.Count > 2)
+					{
+						var str = directives[2].Item as StringLiteral;
+						if (str == null)
+						{
+							parent.AddError(new EndOfLineExpected(directives[2]));
+							return;
+						}
+						parent.ApparentFileName = str.StringValue;
+						if (directives.Count > 3)
+							parent.AddError(new EndOfLineExpected(directives[3]));
+					}
+				}
+			}
 		}
 	}
 
@@ -350,7 +409,8 @@ namespace OpenCSC
 
 		public override void RunDirective(Preprocessor parent, IList<TokenInfo> directives)
 		{
-			throw new NotImplementedException();
+			if (!(directives[0].Item is Pragma))
+				parent.AddError(new DirectiveExpected(directives[0]));
 		}
 	}
 
@@ -362,6 +422,10 @@ namespace OpenCSC
 		protected List<ConditionStackElement> conditionStack;
 		protected bool pastFirstSymbol;
 		protected IDictionary<int, WarningLevel> currentWarningLevels;
+		protected int line;
+		protected int lineModifier;
+		protected Substring apparentFileName;
+		protected bool debugHide;
 
 		public override bool PastFirstSymbol
 		{
@@ -376,6 +440,24 @@ namespace OpenCSC
 					conditionStack = new List<ConditionStackElement>();
 				return conditionStack;
 			}
+		}
+
+		public override Substring ApparentFileName
+		{
+			get { return apparentFileName; }
+			set { apparentFileName = value; }
+		}
+
+		public override int ApparentLineNumber
+		{
+			get { return line + lineModifier; }
+			set { lineModifier = (value - line); }
+		}
+
+		public override bool DebugHide
+		{
+			get { return debugHide; }
+			set { debugHide = value; }
 		}
 
 		public override PreprocessorSettings Settings
@@ -592,6 +674,7 @@ namespace OpenCSC
 			for (int i = 0; i < input.Count; i++)
 			{
 				var item = input[i];
+				line = item.Line;
 				if (item.Item is Hash)
 				{
 					int startPos = i;
@@ -621,9 +704,11 @@ namespace OpenCSC
 				{
 					pastFirstSymbol = true;
 					if (IncludeCode)
-						ret.Add(item);						
+						ret.Add(new TokenInfo(item.Item,
+							apparentFileName == null ? item.File : apparentFileName,
+							ApparentLineNumber, item.Column, debugHide));						
 				}
-				if (lastLine != item.Line && IncludeCode)
+				if (lastLine != line && IncludeCode)
 					foreach (var pair in CurrentWarningLevels)
 						Settings.Warnings[new LineError(lastLine, pair.Key)] = pair.Value;
 				lastLine = item.Line;

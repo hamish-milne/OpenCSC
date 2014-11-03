@@ -334,6 +334,8 @@ namespace OpenCompiler
 		/// </summary>
 		public Token Item;
 
+		public Substring File;
+
 		/// <summary>
 		/// The line the item is found on
 		/// </summary>
@@ -344,17 +346,21 @@ namespace OpenCompiler
 		/// </summary>
 		public int Column;
 
+		public bool DebugHide;
+
 		/// <summary>
 		/// Creates a new object
 		/// </summary>
 		/// <param name="item"></param>
 		/// <param name="line"></param>
 		/// <param name="column"></param>
-		public TokenInfo(Token item, int line, int column)
+		public TokenInfo(Token item, Substring file, int line, int column, bool debugHide)
 		{
 			Item = item;
+			File = file;
 			Line = line;
 			Column = column;
+			DebugHide = debugHide;
 		}
 
 		/// <summary>
@@ -363,7 +369,19 @@ namespace OpenCompiler
 		/// <returns>(<see cref="Line"/>, <see cref="Column"/>) <see cref="Item"/></returns>
 		public override string ToString()
 		{
-			return "(" + Line + ", " + Column + ") " + Item == null ? "null" : Item.ToString();
+			return File + ": (" + Line + ", " + Column + ") " + Item == null ? "null" : Item.ToString();
+		}
+	}
+
+	public struct LexerInput
+	{
+		public string FileName;
+		public string Content;
+
+		public LexerInput(string filename, string content)
+		{
+			FileName = filename;
+			Content = content;
 		}
 	}
 
@@ -371,7 +389,7 @@ namespace OpenCompiler
 	/// Takes in a raw source file, and outputs a list of objects that can be easily parsed
 	/// into code structures
 	/// </summary>
-	public abstract class Lexer : Pipeline<string, IList<TokenInfo>>, IEnumerable<Token>
+	public abstract class Lexer : Pipeline<LexerInput, IList<TokenInfo>>, IEnumerable<Token>
 	{
 		/// <summary>
 		/// The current position of the lexer in the source
@@ -501,6 +519,8 @@ namespace OpenCompiler
 		/// </summary>
 		protected string content;
 
+		protected string fileName;
+
 		/// <summary>
 		/// Direct access to the position
 		/// </summary>
@@ -521,15 +541,16 @@ namespace OpenCompiler
 		/// </summary>
 		/// <param name="input">The string input</param>
 		/// <exception cref="ArgumentNullException"><paramref name="input"/> is null</exception>
-		public override void SetInput(string input)
+		public override void SetInput(LexerInput input)
 		{
-			if (input == null)
+			var content = input.Content;
+			if (content == null)
 				throw new ArgumentNullException("input");
-			var sb = new StringBuilder(input.Length);
+			var sb = new StringBuilder(content.Length);
 			bool cr = false;
-			for (int i = 0; i < input.Length; i++)
+			for (int i = 0; i < content.Length; i++)
 			{
-				var c = input[i];
+				var c = content[i];
 				// Replace CR with LF
 				if (c == '\r')
 				{
@@ -548,7 +569,8 @@ namespace OpenCompiler
 					continue;
 				sb.Append(c);
 			}
-			content = sb.ToString();
+			this.content = sb.ToString();
+			fileName = input.FileName;
 			Position = 0;
 			line = 0;
 			column = 0;
@@ -647,7 +669,7 @@ namespace OpenCompiler
 				// If an item was found, add it to the list
 				if (toAdd != null)
 				{
-					Processed.Add(new TokenInfo(toAdd, Line, Column));
+					Processed.Add(new TokenInfo(toAdd, fileName, Line, Column, false));
 					// If it has zero length (no characters eaten) an infinite loop is possible,
 					// so we should throw here
 					if (position == startPos)

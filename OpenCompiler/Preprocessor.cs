@@ -249,6 +249,12 @@ namespace OpenCompiler
 
 		public abstract bool PastFirstSymbol { get; }
 
+		public abstract int ApparentLineNumber { get; set; }
+
+		public abstract Substring ApparentFileName { get; set; }
+
+		public abstract bool DebugHide { get; set; }
+
 		public virtual void AddError(CompilerError error)
 		{
 			if (error == null)
