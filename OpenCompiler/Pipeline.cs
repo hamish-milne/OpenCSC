@@ -1,8 +1,132 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace OpenCompiler
 {
+
+#if !NET35
+	public class HashSet<T> : ICollection<T>
+	{
+		protected Dictionary<T, bool> dict =
+			new Dictionary<T, bool>();
+		protected int count;
+
+		protected class Enumerator : IEnumerator<T>
+		{
+			IEnumerator<KeyValuePair<T, bool>> internalEnumerator;
+			T current;
+
+			public T Current
+			{
+				get { return current; }
+			}
+
+			public bool MoveNext()
+			{
+				bool ret;
+				do
+				{
+					ret = internalEnumerator.MoveNext();
+				} while (ret && !internalEnumerator.Current.Value);
+				return ret;
+			}
+
+			public void Reset()
+			{
+				current = default(T);
+				internalEnumerator.Reset();
+			}
+
+			object IEnumerator.Current
+			{
+				get { return current; }
+			}
+
+			public Enumerator(HashSet<T> set)
+			{
+				internalEnumerator = set.dict.GetEnumerator();
+			}
+
+			public void Dispose()
+			{
+				internalEnumerator.Dispose();
+				current = default(T);
+			}
+		}
+
+		public int Count
+		{
+			get { return count; }
+		}
+
+		public bool IsReadOnly
+		{
+			get { return false; }
+		}
+
+		public bool Add(T item)
+		{
+			bool ret;
+			dict.TryGetValue(item, out ret);
+			if (!ret)
+			{
+				dict[item] = true;
+				count++;
+			}
+			return !ret;
+		}
+
+		public bool Remove(T item)
+		{
+			bool ret;
+			dict.TryGetValue(item, out ret);
+			if (ret)
+			{
+				dict[item] = false;
+				count--;
+			}
+			return ret;
+		}
+
+		public void Clear()
+		{
+			dict.Clear();
+			count = 0;
+		}
+
+		public bool Contains(T item)
+		{
+			bool ret;
+			dict.TryGetValue(item, out ret);
+			return ret;
+		}
+
+		public void CopyTo(T[] array, int arrayIndex)
+		{
+			foreach (var pair in dict)
+				if (pair.Value)
+					array[arrayIndex++] = pair.Key;
+		}
+
+		public IEnumerator<T> GetEnumerator()
+		{
+			return new Enumerator(this);
+		}
+
+		void ICollection<T>.Add(T item)
+		{
+			Add(item);
+		}
+
+		IEnumerator IEnumerable.GetEnumerator()
+		{
+			return this.GetEnumerator();
+		}
+
+	}
+#endif
+
 	/// <summary>
 	/// Base class for a user code exception
 	/// </summary>
@@ -58,7 +182,11 @@ namespace OpenCompiler
 		/// <summary>
 		/// The desired output location
 		/// </summary>
-		public abstract string OutputLocation { get; }
+		public abstract string OutputLocation { get; set; }
+
+		public abstract ICollection<Substring> Defines { get; }
+
+		public abstract IDictionary<LineError, WarningLevel> Warnings { get; }
 	}
 
 	/// <summary>
@@ -75,6 +203,50 @@ namespace OpenCompiler
 		/// The collection of compiler output lines (errors, warnings and information)
 		/// </summary>
 		public abstract IList<CompilerError> Errors { get; }
+	}
+
+	public class DefaultCompilerInput : CompilerInput
+	{
+		protected IList<string> sourceFiles;
+		protected string outputLocation;
+		protected ICollection<Substring> defines;
+		protected IDictionary<LineError, WarningLevel> warnings;
+
+		public override IList<string> SourceFiles
+		{
+			get
+			{
+				if (sourceFiles == null)
+					sourceFiles = new List<string>();
+				return sourceFiles;
+			}
+		}
+
+		public override string OutputLocation
+		{
+			get { return outputLocation; }
+			set { outputLocation = value; }
+		}
+
+		public override ICollection<Substring> Defines
+		{
+			get
+			{
+				if (defines == null)
+					defines = new HashSet<Substring>();
+				return defines;
+			}
+		}
+
+		public override IDictionary<LineError, WarningLevel> Warnings
+		{
+			get
+			{
+				if (warnings == null)
+					warnings = new Dictionary<LineError, WarningLevel>();
+				return warnings;
+			}
+		}
 	}
 
 	public class DefaultCompilerOutput : CompilerOutput
@@ -125,6 +297,8 @@ namespace OpenCompiler
 
 		public abstract CompilerOutput Output { get; set; }
 
+		public abstract CompilerInput Input { get; set; }
+
 		/// <summary>
 		/// Sets the pipeline stage to use the provided input
 		/// </summary>
@@ -136,6 +310,18 @@ namespace OpenCompiler
 		/// </summary>
 		/// <returns>The output of this stage</returns>
 		public abstract TOutput Run();
+
+		public virtual void AddError(CompilerError error)
+		{
+			if (error == null)
+				throw new ArgumentNullException("error");
+			WarningLevel level;
+			Input.Warnings.TryGetValue(new LineError(error.Line, error.Number), out level);
+			if (level == WarningLevel.Error)
+				error.TreatAsError();
+			if (level != WarningLevel.Disabled)
+				Output.Errors.Add(error);
+		}
 	}
 
 	/// <summary>

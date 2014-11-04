@@ -34,6 +34,7 @@
     <Reference Include="System" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BigNumber.cs" />
     <Compile Include="Braces.cs" />
     <Compile Include="Comment.cs" />
     <Compile Include="CompilerErrors.cs" />
@@ -47,6 +48,8 @@
     <Compile Include="Preprocessor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StringLiteral.cs" />
+    <Compile Include="StructurePass.cs" />
+    <Compile Include="TypeNameResolver.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -37,8 +37,11 @@
   <ItemGroup>
     <Compile Include="CSharpPreprocessor.cs" />
     <Compile Include="PreprocessorErrors.cs" />
+    <Compile Include="PrimitiveTypes.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="CSharpStructurePass.cs" />
+    <Compile Include="StructurePassErrors.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenCompiler\OpenCompiler.csproj">
