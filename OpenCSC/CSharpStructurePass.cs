@@ -6,25 +6,78 @@ using OpenCompiler;
 
 namespace OpenCSC
 {
-	public abstract class ReservedKeyword : Keyword
+	public class Namespace : Keyword
 	{
+		public override Substring Value
+		{
+			get { return "namespace"; }
+		}
 	}
 
-	public class Using : Keyword, IScopeModifier
+	public class Using : Keyword, IStructureItem
 	{
 		public override Substring Value
 		{
 			get { return "using"; }
 		}
 
-		public virtual void RunScopeModifier(StructurePass parent)
+		public virtual void RunStructureItem(StructurePass parent)
 		{
+			int advanceby = 2;
 			var name = parent[1].Item as Keyword;
 			if (name == null)
 				parent.AddError(new IdentifierExpected(parent[1]));
 			else if (name is ReservedKeyword)
 				parent.AddError(new UnexpectedKeyword(parent[1]));
+			else if (!(parent[2].Item is Semicolon))
+			{
+				// If the third item is '=', it's an alias statement
+				if (parent[2].Item is Equals)
+				{
+					advanceby++;
+					var source = parent[3].Item as Keyword;
+					if (source == null)
+						parent.AddError(new IdentifierExpected(parent[3]));
+					else if (source is ReservedKeyword)
+						parent.AddError(new UnexpectedKeyword(parent[3]));
+					else if (!(parent[4].Item is Semicolon))
+						parent.AddError(new SemicolonExpected(parent[3]));
+					else
+					{
+						parent.Aliases.Add(new Alias(source.Value, name.Value));
+						advanceby++;
+					}
+				}
+				else
+					parent.AddError(new SemicolonExpected(parent[2]));
+			}
 			else
+			{
+				parent.Aliases.Add(new Alias(name.Value, ""));
+				advanceby++;
+			}
+			parent.Advance(advanceby);
+		}
+	}
+
+	public class AliasKeyword : Keyword
+	{
+		public override Substring Value
+		{
+			get { return "alias"; }
+		}
+	}
+
+	public class Extern : Keyword, IStructureItem
+	{
+		public override Substring Value
+		{
+			get { return "extern"; }
+		}
+
+		public virtual void RunStructureItem(StructurePass parent)
+		{
+			if(parent.Position == 0 || parent[-3].Item is Namespace)
 			{
 
 			}

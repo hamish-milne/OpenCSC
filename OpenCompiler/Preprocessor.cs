@@ -5,6 +5,21 @@ using System.Text;
 
 namespace OpenCompiler
 {
+	public class EndOfFile : Token
+	{
+		public override int Length
+		{
+			get { return 1; }
+		}
+
+		public override Token CheckPresence(Lexer lexer)
+		{
+			if (lexer[0] == '\0')
+				return Create();
+			return null;
+		}
+	}
+
 	public interface IDirective
 	{
 		void RunDirective(Preprocessor pp, IList<TokenInfo> directives);

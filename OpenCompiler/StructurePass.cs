@@ -4,18 +4,31 @@ using System.Text;
 
 namespace OpenCompiler
 {
-	public interface IScopeModifier
+	public interface IStructureItem
 	{
-		void RunScopeModifier(StructurePass parent);
+		void RunStructureItem(StructurePass parent);
+	}
+
+	public struct Alias
+	{
+		public Substring Source, Destination;
+
+		public Alias(Substring source, Substring destination)
+		{
+			Source = source;
+			Destination = destination;
+		}
 	}
 
 	public abstract class StructurePass : Pipeline<IList<TokenInfo>, IList<TypeStructure>>
 	{
 		public abstract IList<Substring> Scope { get; }
 
-		public abstract IList<Substring> Aliases { get; }
+		public abstract IList<Alias> Aliases { get; }
 
 		public abstract TokenInfo this[int i] { get; }
+
+		public abstract int Position { get; }
 
 		public virtual void Advance()
 		{

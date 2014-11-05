@@ -5,6 +5,29 @@ using OpenCompiler;
 
 namespace OpenCSC
 {
+	public class SemicolonExpected : DefaultCompilerError
+	{
+		public override int Number
+		{
+			get { return 1002; }
+		}
+
+		public override Substring Message
+		{
+			get { return "; expected"; }
+		}
+
+		public SemicolonExpected(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public SemicolonExpected(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
+
 	public class UnexpectedKeyword : DefaultCompilerError
 	{
 		public override int Number

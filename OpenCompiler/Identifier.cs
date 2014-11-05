@@ -191,6 +191,13 @@ namespace OpenCompiler
 	}
 
 	/// <summary>
+	/// Dummy class for keywords that can never be identifiers
+	/// </summary>
+	public abstract class ReservedKeyword : Keyword
+	{
+	}
+
+	/// <summary>
 	/// A template item that returns keywords or identifiers as necessary
 	/// </summary>
 	public class WordTemplate : Word, IEnumerable
