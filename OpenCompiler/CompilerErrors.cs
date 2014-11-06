@@ -24,7 +24,10 @@ namespace OpenCompiler
 
 		public override string ToString()
 		{
-			return Number + ": " + Message + " at line " + Line + ", column " + Column;
+			return "FILENAME HERE" +
+				'(' + Line + ',' + Column + ',' + Line + ',' + (Column + Length) + "): "
+				+ (ErrorLevel == ErrorLevel.Error ? "error" : "warning")
+				+ ' ' + Number + ": " + Message;
 		}
 	}
 

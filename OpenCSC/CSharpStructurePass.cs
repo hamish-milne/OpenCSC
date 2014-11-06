@@ -13,7 +13,7 @@ namespace OpenCSC
 			get { return "namespace"; }
 		}
 	}
-
+	
 	public class Using : Keyword, IStructureItem
 	{
 		public override Substring Value
@@ -31,10 +31,10 @@ namespace OpenCSC
 				parent.AddError(new UnexpectedKeyword(parent[1]));
 			else if (!(parent[2].Item is Semicolon))
 			{
+				advanceby++;
 				// If the third item is '=', it's an alias statement
 				if (parent[2].Item is Equals)
 				{
-					advanceby++;
 					var source = parent[3].Item as Keyword;
 					if (source == null)
 						parent.AddError(new IdentifierExpected(parent[3]));
@@ -44,7 +44,7 @@ namespace OpenCSC
 						parent.AddError(new SemicolonExpected(parent[3]));
 					else
 					{
-						parent.Aliases.Add(new Alias(source.Value, name.Value));
+						parent.Aliases.Add(new Alias(source.Value, name.Value, 0, parent.Position + 5));
 						advanceby++;
 					}
 				}
@@ -53,7 +53,7 @@ namespace OpenCSC
 			}
 			else
 			{
-				parent.Aliases.Add(new Alias(name.Value, ""));
+				parent.Aliases.Add(new Alias(name.Value, "", 0, parent.Position + 3));
 				advanceby++;
 			}
 			parent.Advance(advanceby);
@@ -77,10 +77,20 @@ namespace OpenCSC
 
 		public virtual void RunStructureItem(StructurePass parent)
 		{
-			if(parent.Position == 0 || parent[-3].Item is Namespace)
+			int advanceBy = 2;
+			if (parent.PositionInScope > 0)
+				parent.AddError(new ExternAliasError(parent[0]));
+			if (parent[1].Item is AliasKeyword)
 			{
-
+				advanceBy++;
+				var name = parent[2].Item as Keyword;
+				if(name != null)
+				{
+					advanceBy++;
+				}
 			}
+			else
+				parent.AddError(null);
 		}
 	}
 

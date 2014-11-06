@@ -122,7 +122,6 @@ namespace OpenCSC
 			parent.CheckExcessParams(directives, 2);
 			if (!parent.IncludeCode)
 				return;
-			var conditions = parent.Settings.Defines;
 			DoFunction(parent);
 		}
 
@@ -141,7 +140,7 @@ namespace OpenCSC
 
 		protected override void DoFunction(Preprocessor parent)
 		{
-			var conditions = parent.Settings.Defines;
+			var conditions = parent.Input.Defines;
 			if (!conditions.Contains(Value))
 				conditions.Add(Value);
 		}
@@ -159,7 +158,7 @@ namespace OpenCSC
 
 		protected override void DoFunction(Preprocessor parent)
 		{
-			var conditions = parent.Settings.Defines;
+			var conditions = parent.Input.Defines;
 			while (conditions.Remove(Value))
 			{
 			}
@@ -416,7 +415,7 @@ namespace OpenCSC
 
 	public class CSharpPreprocessor : Preprocessor
 	{
-		protected PreprocessorSettings settings;
+		protected CompilerInput compilerInput;
 		protected CompilerOutput output;
 		protected IList<TokenInfo> input;
 		protected List<ConditionStackElement> conditionStack;
@@ -460,17 +459,17 @@ namespace OpenCSC
 			set { debugHide = value; }
 		}
 
-		public override PreprocessorSettings Settings
+		public override CompilerInput Input
 		{
 			get
 			{
-				if (settings == null)
-					settings = new DefaultPreprocessorSettings();
-				return settings;
+				if (compilerInput == null)
+					compilerInput = new DefaultCompilerInput();
+				return compilerInput;
 			}
-			protected set
+			set
 			{
-				settings = value;
+				compilerInput = value;
 			}
 		}
 
@@ -561,7 +560,7 @@ namespace OpenCSC
 					var word = item.Item as Word;
 					if (word != null)
 						expressionList.Add(new ExpressionValueInfo(
-							Settings.Defines.Contains(word.Value)
+							Input.Defines.Contains(word.Value)
 							? ExpressionValue.True : ExpressionValue.False,
 							item.Column, item.Item.Length));
 					else if (item.Item is AND)
@@ -710,7 +709,7 @@ namespace OpenCSC
 				}
 				if (lastLine != line && IncludeCode)
 					foreach (var pair in CurrentWarningLevels)
-						Settings.Warnings[new LineError(lastLine, pair.Key)] = pair.Value;
+						Input.Warnings[new LineError(lastLine, pair.Key)] = pair.Value;
 				lastLine = item.Line;
 			}
 			if (ConditionStack.Count > 0)

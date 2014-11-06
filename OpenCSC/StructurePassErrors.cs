@@ -58,4 +58,50 @@ namespace OpenCSC
 			Keyword = item.Item as Keyword;
 		}
 	}
+
+	public class ExternAliasError : DefaultCompilerError
+	{
+		public override int Number
+		{
+			get { return 439; }
+		}
+
+		public override Substring Message
+		{
+			get { return "An extern alias declaration must precede all other elements defined in the namespace"; }
+		}
+
+		public ExternAliasError(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public ExternAliasError(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
+
+	public class TypeExpected : DefaultCompilerError
+	{
+		public override int Number
+		{
+			get { return 1022; }
+		}
+
+		public override Substring Message
+		{
+			get { return "Type or namespace definition, or end-of-file expected"; }
+		}
+
+		public TypeExpected(int line, int column, int length)
+			: base(line, column, length)
+		{
+		}
+
+		public TypeExpected(TokenInfo item)
+			: base(item)
+		{
+		}
+	}
 }

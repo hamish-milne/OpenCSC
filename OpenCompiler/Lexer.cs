@@ -498,6 +498,7 @@ namespace OpenCompiler
 	/// </summary>
 	public class DefaultLexer : Lexer
 	{
+		protected CompilerInput input;
 		protected CompilerOutput output;
 
 		public override CompilerOutput Output
@@ -511,6 +512,20 @@ namespace OpenCompiler
 			set
 			{
 				output = value;
+			}
+		}
+
+		public override CompilerInput Input
+		{
+			get
+			{
+				if (input == null)
+					input = new DefaultCompilerInput();
+				return input;
+			}
+			set
+			{
+				input = value;
 			}
 		}
 
